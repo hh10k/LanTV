@@ -1,5 +1,3 @@
 <resources>
     <string name="app_name">LanTV</string>
-
-    <string name="title_activity_video">VideoActivity</string>
 </resources>

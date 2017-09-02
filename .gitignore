@@ -7,3 +7,6 @@
 /build
 /captures
 .externalNativeBuild
+
+# Ignore libvlc.aar, it's GPL is poison
+/app/libs/libvlc.aar
