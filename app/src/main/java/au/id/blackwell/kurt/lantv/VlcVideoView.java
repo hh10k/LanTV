@@ -26,6 +26,7 @@ public class VlcVideoView extends RelativeLayout implements IVLCVout.Callback, I
     private FrameLayout mSurfaceFrame = null;
     private LibVLC mLibVLC = null;
     private MediaPlayer mMediaPlayer = null;
+    private Uri mMediaUri = null;
 
     private final OnLayoutChangeListener mLayoutChangedListener = new OnLayoutChangeListener() {
         private final Runnable mRunnable = new Runnable() {
@@ -65,18 +66,9 @@ public class VlcVideoView extends RelativeLayout implements IVLCVout.Callback, I
         LayoutInflater inflater = (LayoutInflater) context.getSystemService(Context.LAYOUT_INFLATER_SERVICE);
         addView(inflater.inflate(R.layout.view_vlc_video, null));
 
-        mSurfaceFrame = (FrameLayout) findViewById(R.id.surface_frame);
         mSurface = (SurfaceView) findViewById(R.id.surface);
-
+        mSurfaceFrame = (FrameLayout) findViewById(R.id.surface_frame);
         mSurfaceFrame.addOnLayoutChangeListener(mLayoutChangedListener);
-    }
-
-    public void playFile(File file) {
-        playUri(Uri.fromFile(file));
-    }
-
-    public void playUri(Uri mediaUri) {
-        closeMedia();
 
         ArrayList<String> options = new ArrayList<String>();
         options.add("-vvv"); // Very verbose
@@ -89,7 +81,22 @@ public class VlcVideoView extends RelativeLayout implements IVLCVout.Callback, I
         options.add("--avcodec-skip-idct");
         options.add("0");
         mLibVLC = new LibVLC(getContext(), options);
+    }
 
+    private void deinit() {
+        if (mLibVLC != null) {
+            mLibVLC.release();
+            mLibVLC = null;
+        }
+    }
+
+    private void createPlayer() {
+        if (mMediaPlayer != null) {
+            // Already created
+            return;
+        }
+
+        Log.i(TAG, "Creating video player");
         mMediaPlayer = new MediaPlayer(mLibVLC);
         mMediaPlayer.setEventListener(this);
 
@@ -98,26 +105,56 @@ public class VlcVideoView extends RelativeLayout implements IVLCVout.Callback, I
         vout.addCallback(this);
         vout.attachViews(this);
 
-        Media m = new Media(mLibVLC, mediaUri);
+        Media m = new Media(mLibVLC, mMediaUri);
         // TODO: Investigate what these media options do.
         m.setHWDecoderEnabled(true, false);
         m.addOption(":no-mediacodec-dr");
         m.addOption(":no-omxil-dr");
-
         mMediaPlayer.setMedia(m);
         m.release();
-        mMediaPlayer.play();
 
         onResize();
+    }
+
+    private void destroyPlayer() {
+        if (mMediaPlayer == null) {
+            // Already destroyed
+            return;
+        }
+
+        Log.i(TAG, "Destroying video player");
+        mMediaPlayer.stop();
+
+        IVLCVout vout = mMediaPlayer.getVLCVout();
+        vout.removeCallback(this);
+        vout.detachViews();
+
+        mMediaPlayer.release();
+        mMediaPlayer = null;
+    }
+
+    public void playFile(File file) {
+        playUri(Uri.fromFile(file));
+    }
+
+    public void playUri(Uri mediaUri) {
+        stop();
+        mMediaUri = mediaUri;
+        resume();
     }
 
     /**
      * Resume playing the video
      */
     public void resume() {
-        if (mMediaPlayer != null) {
-            mMediaPlayer.play();
+        if (mMediaUri == null) {
+            // Nothing to resume
+            return;
         }
+
+        Log.i(TAG, "Playing video");
+        createPlayer();
+        mMediaPlayer.play();
     }
 
     /**
@@ -125,42 +162,43 @@ public class VlcVideoView extends RelativeLayout implements IVLCVout.Callback, I
      */
     public void pause() {
         if (mMediaPlayer != null) {
-            mMediaPlayer.pause();
+            // We are informed via the PausableChanged event whether a video is pausable, but it tells lies.
+            // Checking whether a stream is seekable seems to be the best way of telling whether the video needs to be restarted when resuming.
+            if (mMediaPlayer.isSeekable()) {
+                Log.i(TAG, "Pausing video");
+                mMediaPlayer.pause();
+            } else {
+                Log.i(TAG, "Stopping streaming video");
+                stop();
+            }
         }
     }
 
-    public void closeMedia() {
-        if (mMediaPlayer != null) {
-            mMediaPlayer.stop();
-
-            IVLCVout vout = mMediaPlayer.getVLCVout();
-            vout.removeCallback(this);
-            vout.detachViews();
-
-            mMediaPlayer.release();
-            mMediaPlayer = null;
-        }
-
-        if (mLibVLC != null) {
-            mLibVLC.release();
-            mLibVLC = null;
-        }
+    /**
+     * Stop video, closing it.
+     */
+    public void stop() {
+        destroyPlayer();
     }
 
     private void onResize() {
-        if (mMediaPlayer != null) {
-            // Tell VLC how big the surface is
-            int width = getWidth();
-            int height = getHeight();
-            if (width != 0 && height != 0) {
-                IVLCVout vout = mMediaPlayer.getVLCVout();
-                vout.setWindowSize(width, height);
-            }
+        if (mMediaPlayer == null) {
+            // Nothing to resize
+            return;
+        }
 
-            // Set the video to auto fit.  We don't need to support anything else.
-            // If you do, check https://code.videolan.org/videolan/libvlc-android-samples/blob/master/java_sample/src/main/java/org/videolan/javasample/JavaActivity.java
-            mMediaPlayer.setAspectRatio(null);
-            mMediaPlayer.setScale(0);
+        // Set the video to auto fit.  We don't need to support anything else.
+        // If you do, check https://code.videolan.org/videolan/libvlc-android-samples/blob/master/java_sample/src/main/java/org/videolan/javasample/JavaActivity.java
+        mMediaPlayer.setAspectRatio(null);
+        mMediaPlayer.setScale(0);
+
+        // Tell VLC how big the surface is
+        int width = getWidth();
+        int height = getHeight();
+        if (width != 0 && height != 0) {
+            IVLCVout vout = mMediaPlayer.getVLCVout();
+            vout.setWindowSize(width, height);
+            Log.i(TAG, "Video resized to " + Integer.toString(width) + "x" + Integer.toString(height));
         }
     }
 
@@ -186,6 +224,12 @@ public class VlcVideoView extends RelativeLayout implements IVLCVout.Callback, I
             case MediaPlayer.Event.EndReached:
                 Log.d(TAG, "MediaPlayer.Event.EndReached");
                 break;
+            case MediaPlayer.Event.Opening:
+                Log.d(TAG, "MediaPlayer.Event.Opening");
+                break;
+            case MediaPlayer.Event.Buffering:
+                Log.d(TAG, "MediaPlayer.Event.Buffering " + Float.toString(event.getBuffering()));
+                break;
             case MediaPlayer.Event.Playing:
                 Log.d(TAG, "MediaPlayer.Event.Playing");
                 break;
@@ -197,6 +241,15 @@ public class VlcVideoView extends RelativeLayout implements IVLCVout.Callback, I
                 break;
             case MediaPlayer.Event.EncounteredError:
                 Log.d(TAG, "MediaPlayer.Event.EncounteredError");
+                break;
+            case MediaPlayer.Event.PositionChanged:
+                Log.d(TAG, "MediaPlayer.Event.PositionChanged " + Float.toString(event.getPositionChanged()));
+                break;
+            case MediaPlayer.Event.SeekableChanged:
+                Log.d(TAG, "MediaPlayer.Event.SeekableChanged " + Boolean.toString(event.getSeekable()));
+                break;
+            case MediaPlayer.Event.PausableChanged:
+                Log.d(TAG, "MediaPlayer.Event.PausableChanged " + Boolean.toString(event.getPausable()));
                 break;
             default:
                 Log.d(TAG, "MediaPlayer.Event." + Integer.toString(event.type));
