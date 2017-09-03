@@ -177,6 +177,8 @@ public class VlcVideoView extends RelativeLayout {
 
         Log.i(TAG, "Creating video player");
 
+        mLibVLC.setUserAgent(mMediaDetails.getUserAgentName(), mMediaDetails.getHttpUserAgent());
+
         mMediaPlayer = new MediaPlayer(mLibVLC);
         mMediaPlayer.setEventListener(mMediaPlayerEventListener);
 
