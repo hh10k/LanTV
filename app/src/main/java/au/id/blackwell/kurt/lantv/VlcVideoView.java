@@ -1,7 +1,6 @@
 package au.id.blackwell.kurt.lantv;
 
 import android.content.Context;
-import android.net.Uri;
 import android.util.AttributeSet;
 import android.util.Log;
 import android.view.LayoutInflater;
@@ -15,10 +14,9 @@ import org.videolan.libvlc.LibVLC;
 import org.videolan.libvlc.Media;
 import org.videolan.libvlc.MediaPlayer;
 
-import java.io.File;
 import java.util.ArrayList;
 
-public class VlcVideoView extends RelativeLayout implements IVLCVout.Callback, IVLCVout.OnNewVideoLayoutListener, MediaPlayer.EventListener {
+public class VlcVideoView extends RelativeLayout {
 
     private static final String TAG = "VideoView";
 
@@ -26,10 +24,34 @@ public class VlcVideoView extends RelativeLayout implements IVLCVout.Callback, I
     private FrameLayout mSurfaceFrame = null;
     private LibVLC mLibVLC = null;
     private MediaPlayer mMediaPlayer = null;
-    private Uri mMediaUri = null;
+    private MediaDetails mMediaDetails = null;
+    private IMediaResolver mMediaResolver = null;
+
+    private final IMediaResolver.Callback mMediaResolverCallback = new IMediaResolver.Callback() {
+        @Override
+        public void onMediaResolved(MediaDetails details) {
+            mMediaDetails = details;
+            resume();
+        }
+
+        @Override
+        public void onMediaResolverProgress(float progress) {
+        }
+    };
+
+    private final IVLCVout.Callback mVlcVoutCallback = new IVLCVout.Callback() {
+        @Override
+        public void onSurfacesCreated(IVLCVout ivlcVout) {
+            // TODO: Investigate purpose of VLC surface notifications
+        }
+
+        @Override
+        public void onSurfacesDestroyed(IVLCVout ivlcVout) {
+        }
+    };
 
     private final OnLayoutChangeListener mLayoutChangedListener = new OnLayoutChangeListener() {
-        private final Runnable mRunnable = new Runnable() {
+        private final Runnable mOnResize = new Runnable() {
             @Override
             public void run() {
                 onResize();
@@ -38,10 +60,66 @@ public class VlcVideoView extends RelativeLayout implements IVLCVout.Callback, I
 
         @Override
         public void onLayoutChange(View v, int left, int top, int right, int bottom, int oldLeft, int oldTop, int oldRight, int oldBottom) {
-            if (left != oldLeft || top != oldTop || right != oldRight || bottom != oldBottom) {
+            int oldWidth = oldRight - oldLeft;
+            int oldHeight = oldBottom - oldTop;
+            int newWidth = right - left;
+            int newHeight = bottom - top;
+            if (newWidth != oldWidth || newHeight != oldHeight) {
                 // Layout size invalidated.  Refresh at next opportunity.
-                removeCallbacks(mRunnable);
-                post(mRunnable);
+                removeCallbacks(mOnResize);
+                post(mOnResize);
+            }
+        }
+    };
+
+    private final IVLCVout.OnNewVideoLayoutListener mNewVideoLayoutLisener = new IVLCVout.OnNewVideoLayoutListener() {
+        @Override
+        public void onNewVideoLayout(IVLCVout vout, int width, int height, int visibleWidth, int visibleHeight, int sarNum, int sarDen) {
+            // TODO: Investigate purpose of onNewVideoLayout when VLC is responsible for maintaining the correct size.
+        }
+    };
+
+    private final MediaPlayer.EventListener mMediaPlayerEventListener = new MediaPlayer.EventListener() {
+        @Override
+        public void onEvent(MediaPlayer.Event event) {
+
+            switch(event.type) {
+                case MediaPlayer.Event.MediaChanged:
+                    Log.d(TAG, "MediaPlayer.Event.MediaChanged");
+                    break;
+                case MediaPlayer.Event.EndReached:
+                    Log.d(TAG, "MediaPlayer.Event.EndReached");
+                    break;
+                case MediaPlayer.Event.Opening:
+                    Log.d(TAG, "MediaPlayer.Event.Opening");
+                    break;
+                case MediaPlayer.Event.Buffering:
+                    Log.d(TAG, "MediaPlayer.Event.Buffering " + Float.toString(event.getBuffering()));
+                    break;
+                case MediaPlayer.Event.Playing:
+                    Log.d(TAG, "MediaPlayer.Event.Playing");
+                    break;
+                case MediaPlayer.Event.Paused:
+                    Log.d(TAG, "MediaPlayer.Event.Paused");
+                    break;
+                case MediaPlayer.Event.Stopped:
+                    Log.d(TAG, "MediaPlayer.Event.Stopped");
+                    break;
+                case MediaPlayer.Event.EncounteredError:
+                    Log.d(TAG, "MediaPlayer.Event.EncounteredError");
+                    break;
+                case MediaPlayer.Event.PositionChanged:
+                    Log.d(TAG, "MediaPlayer.Event.PositionChanged " + Float.toString(event.getPositionChanged()));
+                    break;
+                case MediaPlayer.Event.SeekableChanged:
+                    Log.d(TAG, "MediaPlayer.Event.SeekableChanged " + Boolean.toString(event.getSeekable()));
+                    break;
+                case MediaPlayer.Event.PausableChanged:
+                    Log.d(TAG, "MediaPlayer.Event.PausableChanged " + Boolean.toString(event.getPausable()));
+                    break;
+                default:
+                    Log.d(TAG, "MediaPlayer.Event." + Integer.toString(event.type));
+                    break;
             }
         }
     };
@@ -64,7 +142,7 @@ public class VlcVideoView extends RelativeLayout implements IVLCVout.Callback, I
     private void init(Context context) {
         // Populate this view based on the layout resource
         LayoutInflater inflater = (LayoutInflater) context.getSystemService(Context.LAYOUT_INFLATER_SERVICE);
-        addView(inflater.inflate(R.layout.view_vlc_video, null));
+        inflater.inflate(R.layout.view_vlc_video, this, true);
 
         mSurface = (SurfaceView) findViewById(R.id.surface);
         mSurfaceFrame = (FrameLayout) findViewById(R.id.surface_frame);
@@ -84,6 +162,7 @@ public class VlcVideoView extends RelativeLayout implements IVLCVout.Callback, I
     }
 
     private void deinit() {
+        destroyPlayer();
         if (mLibVLC != null) {
             mLibVLC.release();
             mLibVLC = null;
@@ -97,15 +176,16 @@ public class VlcVideoView extends RelativeLayout implements IVLCVout.Callback, I
         }
 
         Log.i(TAG, "Creating video player");
+
         mMediaPlayer = new MediaPlayer(mLibVLC);
-        mMediaPlayer.setEventListener(this);
+        mMediaPlayer.setEventListener(mMediaPlayerEventListener);
 
         IVLCVout vout = mMediaPlayer.getVLCVout();
         vout.setVideoView(mSurface);
-        vout.addCallback(this);
-        vout.attachViews(this);
+        vout.addCallback(mVlcVoutCallback);
+        vout.attachViews(mNewVideoLayoutLisener);
 
-        Media m = new Media(mLibVLC, mMediaUri);
+        Media m = new Media(mLibVLC, mMediaDetails.getUri());
         // TODO: Investigate what these media options do.
         m.setHWDecoderEnabled(true, false);
         m.addOption(":no-mediacodec-dr");
@@ -126,28 +206,26 @@ public class VlcVideoView extends RelativeLayout implements IVLCVout.Callback, I
         mMediaPlayer.stop();
 
         IVLCVout vout = mMediaPlayer.getVLCVout();
-        vout.removeCallback(this);
+        vout.removeCallback(mVlcVoutCallback);
         vout.detachViews();
 
         mMediaPlayer.release();
         mMediaPlayer = null;
     }
 
-    public void playFile(File file) {
-        playUri(Uri.fromFile(file));
-    }
-
-    public void playUri(Uri mediaUri) {
+    public void play(IMediaResolver mediaResolver) {
         stop();
-        mMediaUri = mediaUri;
-        resume();
+        mMediaDetails = null;
+        mMediaResolver = mediaResolver;
+        // TODO: Track states and make this robust
+        mMediaResolver.resolve(mMediaResolverCallback);
     }
 
     /**
      * Resume playing the video
      */
     public void resume() {
-        if (mMediaUri == null) {
+        if (mMediaDetails == null) {
             // Nothing to resume
             return;
         }
@@ -199,61 +277,6 @@ public class VlcVideoView extends RelativeLayout implements IVLCVout.Callback, I
             IVLCVout vout = mMediaPlayer.getVLCVout();
             vout.setWindowSize(width, height);
             Log.i(TAG, "Video resized to " + Integer.toString(width) + "x" + Integer.toString(height));
-        }
-    }
-
-    @Override
-    public void onSurfacesCreated(IVLCVout ivlcVout) {
-    }
-
-    @Override
-    public void onSurfacesDestroyed(IVLCVout ivlcVout) {
-    }
-
-    @Override
-    public void onNewVideoLayout(IVLCVout vout, int width, int height, int visibleWidth, int visibleHeight, int sarNum, int sarDen) {
-    }
-
-    @Override
-    public void onEvent(MediaPlayer.Event event) {
-
-        switch(event.type) {
-            case MediaPlayer.Event.MediaChanged:
-                Log.d(TAG, "MediaPlayer.Event.MediaChanged");
-                break;
-            case MediaPlayer.Event.EndReached:
-                Log.d(TAG, "MediaPlayer.Event.EndReached");
-                break;
-            case MediaPlayer.Event.Opening:
-                Log.d(TAG, "MediaPlayer.Event.Opening");
-                break;
-            case MediaPlayer.Event.Buffering:
-                Log.d(TAG, "MediaPlayer.Event.Buffering " + Float.toString(event.getBuffering()));
-                break;
-            case MediaPlayer.Event.Playing:
-                Log.d(TAG, "MediaPlayer.Event.Playing");
-                break;
-            case MediaPlayer.Event.Paused:
-                Log.d(TAG, "MediaPlayer.Event.Paused");
-                break;
-            case MediaPlayer.Event.Stopped:
-                Log.d(TAG, "MediaPlayer.Event.Stopped");
-                break;
-            case MediaPlayer.Event.EncounteredError:
-                Log.d(TAG, "MediaPlayer.Event.EncounteredError");
-                break;
-            case MediaPlayer.Event.PositionChanged:
-                Log.d(TAG, "MediaPlayer.Event.PositionChanged " + Float.toString(event.getPositionChanged()));
-                break;
-            case MediaPlayer.Event.SeekableChanged:
-                Log.d(TAG, "MediaPlayer.Event.SeekableChanged " + Boolean.toString(event.getSeekable()));
-                break;
-            case MediaPlayer.Event.PausableChanged:
-                Log.d(TAG, "MediaPlayer.Event.PausableChanged " + Boolean.toString(event.getPausable()));
-                break;
-            default:
-                Log.d(TAG, "MediaPlayer.Event." + Integer.toString(event.type));
-                break;
         }
     }
 }

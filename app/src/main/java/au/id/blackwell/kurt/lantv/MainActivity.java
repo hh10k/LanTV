@@ -1,5 +1,6 @@
 package au.id.blackwell.kurt.lantv;
 
+import android.net.Uri;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 
@@ -15,7 +16,10 @@ public class MainActivity extends AppCompatActivity {
         setContentView(R.layout.activity_main);
 
         mVideo = (VlcVideoView) findViewById(R.id.video);
-        mVideo.playFile(new File("/storage/sdcard/Download/big_buck_bunny.mp4"));
+
+        MediaDetails media = new MediaDetails(Uri.fromFile((new File("/storage/sdcard/Download/big_buck_bunny.mp4"))));
+        IMediaResolver resolver = new StaticMediaResolver(media);
+        mVideo.play(resolver);
     }
 
     @Override
