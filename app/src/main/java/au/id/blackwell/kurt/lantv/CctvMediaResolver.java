@@ -1,7 +1,11 @@
 package au.id.blackwell.kurt.lantv;
 
+import android.annotation.TargetApi;
+import android.graphics.Bitmap;
 import android.net.Uri;
+import android.os.Build;
 import android.os.Handler;
+import android.util.Log;
 import android.webkit.ValueCallback;
 import android.webkit.WebResourceError;
 import android.webkit.WebResourceRequest;
@@ -9,6 +13,9 @@ import android.webkit.WebResourceResponse;
 import android.webkit.WebSettings;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
+
+import org.json.JSONException;
+import org.json.JSONObject;
 
 import java.util.ArrayList;
 
@@ -45,23 +52,47 @@ final class CctvMediaResolver implements IMediaResolver {
         @Override
         public void run(IPool.Item item) {
             mWebView = item;
-            mResolveState = ResolveState.START;
-            update();
+            enterStartState();
         }
     };
 
     private final WebViewClient mWebViewClient = new WebViewClient() {
+        private String mCurrentUrl = null;
+
+        @SuppressWarnings("deprecation")
         @Override
-        public void onPageFinished(WebView view, String url) {
-            super.onPageFinished(view, url);
-            mPageState = PageState.FINISHED;
-            update();
+        public boolean shouldOverrideUrlLoading(WebView view, String url) {
+            Log.d(TAG, "Page: Navigating to " + url);
+            mCurrentUrl = url;
+            return false;
+        }
+
+        @TargetApi(Build.VERSION_CODES.N)
+        @Override
+        public boolean shouldOverrideUrlLoading(WebView view, WebResourceRequest request) {
+            return shouldOverrideUrlLoading(view, request.getUrl().toString());
         }
 
         @Override
-        public void onReceivedError(WebView view, WebResourceRequest request, WebResourceError
-        error) {
+        public void onPageStarted(WebView view, String url, Bitmap favicon) {
+            Log.d(TAG, "Page: Started " + url);
+            mCurrentUrl = url;
+        }
+
+        @Override
+        public void onPageFinished(WebView view, String url) {
+            super.onPageFinished(view, url);
+            if (mCurrentUrl == url) {
+                Log.d(TAG, "Page: Finished " + url);
+                mPageState = PageState.FINISHED;
+                update();
+            }
+        }
+
+        @Override
+        public void onReceivedError(WebView view, WebResourceRequest request, WebResourceError error) {
             super.onReceivedError(view, request, error);
+            Log.d(TAG, "Page: Error");
             mPageState = PageState.ERROR;
             update();
         }
@@ -69,6 +100,7 @@ final class CctvMediaResolver implements IMediaResolver {
         @Override
         public void onReceivedHttpError(WebView view, WebResourceRequest request, WebResourceResponse errorResponse) {
             super.onReceivedHttpError(view, request, errorResponse);
+            Log.d(TAG, "Page: HTTP Error");
             mPageState = PageState.ERROR;
             update();
         }
@@ -88,36 +120,41 @@ final class CctvMediaResolver implements IMediaResolver {
 
     @Override
     public void resolve(Callback callback) {
+        Log.d(TAG, "Adding callback");
         mCallbacks.add(callback);
         update();
     }
 
     @Override
     public void cancel(Callback callback) {
+        Log.d(TAG, "Removing callback");
         mCallbacks.remove(callback);
         update();
     }
 
     private void onResolved(MediaDetails details) {
+        Log.i(TAG, "Resolved " + (details != null ? details.getUri() : "nothing"));
+
         // Swap out callbacks so it's not possible to modify the array while dispatching.
         ArrayList<Callback> callbacks = mCallbacks;
         mCallbacks = new ArrayList<Callback>();
 
         enterIdleState();
 
-        for (Callback callback : mCallbacks) {
+        for (Callback callback : callbacks) {
             callback.onMediaResolved(details);
         }
     }
 
     private void enterIdleState() {
         // We can enter this state many ways.  Reset everything.
+        Log.i(TAG, "Idle");
 
         mHandler.removeCallbacks(mFindVideoRunnable);
         mWebViewPool.cancel(mWebViewPoolCallback);
         if (mWebView != null) {
             WebView web = mWebView.get();
-            web.setWebViewClient(null);
+            web.setWebViewClient(new WebViewClient());
             web.loadUrl("about:blank");
             web.clearHistory();
             mWebView.release();
@@ -128,9 +165,22 @@ final class CctvMediaResolver implements IMediaResolver {
         mResolveState = ResolveState.IDLE;
     }
 
+    private void enterQueuedState() {
+        Log.d(TAG, "Getting WebView");
+        mResolveState = ResolveState.QUEUED;
+        mWebViewPool.request(mWebViewPoolCallback);
+    }
+
+    private void enterStartState() {
+        Log.d(TAG, "Starting");
+        mResolveState = ResolveState.START;
+        update();
+    }
+
     private void enterLoadingState() {
         if (mPageState != PageState.LOADING) {
             // The page is finished or failed, we don't want to do LOADING anymore.
+            Log.d(TAG, "Page state is " + mPageState.toString() + ", loading stopped");
             onResolved(null);
         } else {
             mHandler.postDelayed(mFindVideoRunnable, FIND_VIDEO_INTERVAL);
@@ -140,22 +190,32 @@ final class CctvMediaResolver implements IMediaResolver {
     }
 
     private void enterFindingState() {
+        Log.d(TAG, "Finding <video>");
         mResolveState = ResolveState.FINDING;
 
         WebView web = mWebView.get();
         String javaScript =
-            "var videos = document.getElementsByTagName('video');\n" +
-            "if (videos.html5Player) return videos.html5Player.src;\n" +
-            "if (videos.length > 0) return videos[0].src;\n" +
-            "return null;";
+            "(function() {\n" +
+            "  var videos = document.getElementsByTagName('video');\n" +
+            "  var src = (videos.html5Player) ? videos.html5Player.src\n" +
+            "    : (videos.length > 0) ? videos[0].src\n" +
+            "    : undefined;\n" +
+            "  return { src: src }\n" +
+            "})();";
         web.evaluateJavascript(javaScript, new ValueCallback<String>() {
             @Override
-            public void onReceiveValue(String s) {
-                if (s == null) {
+            public void onReceiveValue(String json) {
+                String url = null;
+                try {
+                    JSONObject reader = new JSONObject(json);
+                    url = reader.getString("src");
+                } catch (JSONException e) {
+                }
+                if (url == null || url.isEmpty()) {
                     enterLoadingState();
                 } else {
                     // We have it!
-                    MediaDetails media = new MediaDetails(Uri.parse(s));
+                    MediaDetails media = new MediaDetails(Uri.parse(url));
                     onResolved(media);
                 }
             }
@@ -171,8 +231,7 @@ final class CctvMediaResolver implements IMediaResolver {
         switch (mResolveState) {
             case IDLE:
                 if (!mCallbacks.isEmpty()) {
-                    mResolveState = ResolveState.QUEUED;
-                    mWebViewPool.request(mWebViewPoolCallback);
+                    enterQueuedState();
                 }
                 break;
             case QUEUED:
@@ -184,6 +243,7 @@ final class CctvMediaResolver implements IMediaResolver {
                 WebSettings settings = web.getSettings();
                 settings.setUserAgentString("UCWEB/2.0 (iPad; U; CPU OS 7_1 like Mac OS X; en; iPad3,6) U2/1.0.0 UCBrowser/9.3.1.344");
                 settings.setJavaScriptEnabled(true);
+                settings.setLoadsImagesAutomatically(false);
                 web.setWebViewClient(mWebViewClient);
                 web.loadUrl(mUrl);
 
