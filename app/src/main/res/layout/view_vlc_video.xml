@@ -5,12 +5,14 @@
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:layout_gravity="center"
-        android:foregroundGravity="clip_horizontal|clip_vertical" >
+        android:foregroundGravity="clip_horizontal|clip_vertical"
+        >
 
         <SurfaceView
             android:id="@+id/surface"
             android:layout_width="match_parent"
             android:layout_height="match_parent"
-            android:layout_gravity="center"/>
+            android:layout_gravity="center"
+            />
     </FrameLayout>
 </merge>

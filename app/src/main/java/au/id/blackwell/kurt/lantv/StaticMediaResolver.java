@@ -3,7 +3,7 @@ package au.id.blackwell.kurt.lantv;
 /**
  * Immediately provides the media that it was constructed with.
  */
-class StaticMediaResolver implements IMediaResolver {
+final class StaticMediaResolver implements IMediaResolver {
     private MediaDetails mDetails;
 
     public StaticMediaResolver(MediaDetails details) {

@@ -2,7 +2,7 @@ package au.id.blackwell.kurt.lantv;
 
 import android.net.Uri;
 
-public class MediaDetails {
+public final class MediaDetails {
     public static final String DEFAULT_USER_AGENT_NAME = "LanTV";
     public static final String DEFAULT_HTTP_USER_AGENT = "LanTV";
 

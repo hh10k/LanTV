@@ -9,6 +9,14 @@
     <au.id.blackwell.kurt.lantv.VlcVideoView
         android:id="@+id/video"
         android:layout_width="match_parent"
-        android:layout_height="match_parent" />
+        android:layout_height="match_parent"
+        />
+
+    <au.id.blackwell.kurt.lantv.WebView
+        android:id="@+id/worker_web_view"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:visibility="gone"
+        />
 
 </android.support.constraint.ConstraintLayout>

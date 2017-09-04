@@ -16,7 +16,7 @@ import org.videolan.libvlc.MediaPlayer;
 
 import java.util.ArrayList;
 
-public class VlcVideoView extends RelativeLayout {
+public final class VlcVideoView extends RelativeLayout {
 
     private static final String TAG = "VideoView";
 
