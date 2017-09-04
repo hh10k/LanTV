@@ -251,6 +251,8 @@ public final class VlcVideoView extends RelativeLayout {
                 Log.i(TAG, "Stopping streaming video");
                 stop();
             }
+        } else if (mMediaDetails != null) {
+            mMediaResolver.cancel(mMediaResolverCallback);
         }
     }
 

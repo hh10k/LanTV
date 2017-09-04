@@ -17,6 +17,8 @@ import android.webkit.WebViewClient;
 import org.json.JSONException;
 import org.json.JSONObject;
 
+import java.io.ByteArrayInputStream;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 
 final class CctvMediaResolver implements IMediaResolver {
@@ -71,6 +73,35 @@ final class CctvMediaResolver implements IMediaResolver {
         @Override
         public boolean shouldOverrideUrlLoading(WebView view, WebResourceRequest request) {
             return shouldOverrideUrlLoading(view, request.getUrl().toString());
+        }
+
+        private WebResourceResponse shouldInterceptRequest(WebView view, Uri uri) {
+            String host = uri.getHost();
+
+            WebResourceResponse response;
+            if ("pic.fastapi.net".equals(host)
+                || "p1.img.cctvpic.com".equals(host)
+                || "bdimg.share.baidu.com".equals(host)) {
+                Log.d(TAG, "Page: Blocked " + uri.toString());
+                ByteArrayInputStream data = new ByteArrayInputStream("".getBytes(StandardCharsets.UTF_8));
+                response = new WebResourceResponse("text/plain", StandardCharsets.UTF_8.name(), data);
+            } else {
+                Log.d(TAG, "Page: Requesting " + uri.toString());
+                response = null;
+            }
+            return response;
+        }
+
+        @SuppressWarnings("deprecation")
+        @Override
+        public WebResourceResponse shouldInterceptRequest(WebView view, String url) {
+            return shouldInterceptRequest(view, Uri.parse(url));
+        }
+
+        @TargetApi(Build.VERSION_CODES.N)
+        @Override
+        public WebResourceResponse shouldInterceptRequest(WebView view, WebResourceRequest request) {
+            return shouldInterceptRequest(view, request.getUrl());
         }
 
         @Override
