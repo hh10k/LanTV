@@ -188,10 +188,6 @@ public final class VlcVideoView extends RelativeLayout {
         vout.attachViews(mNewVideoLayoutLisener);
 
         Media m = new Media(mLibVLC, mMediaDetails.getUri());
-        // TODO: Investigate what these media options do.
-        m.setHWDecoderEnabled(true, false);
-        m.addOption(":no-mediacodec-dr");
-        m.addOption(":no-omxil-dr");
         mMediaPlayer.setMedia(m);
         m.release();
 
