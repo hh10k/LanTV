@@ -24,6 +24,10 @@ import java.util.ArrayList;
 final class CctvMediaResolver implements IMediaResolver {
     private static final String TAG = "CctvMediaResolver";
 
+    // The maximum number of millseconds to wait after the page has finished
+    // loading before we give up looking for the video URL to appear.
+    private static final int PAGE_FINISHED_LOADING_TIMEOUT = 10000;
+
     enum ResolveState {
         IDLE,
         QUEUED,
@@ -48,6 +52,7 @@ final class CctvMediaResolver implements IMediaResolver {
     private ArrayList<Callback> mCallbacks = new ArrayList<Callback>();
     private ResolveState mResolveState = ResolveState.IDLE;
     private PageState mPageState = PageState.NONE;
+    private long mPageStateTimestamp = 0;
     private final Handler mHandler = new Handler();
 
     private final IPool.Callback mWebViewPoolCallback = new IPool.Callback() {
@@ -113,9 +118,9 @@ final class CctvMediaResolver implements IMediaResolver {
         @Override
         public void onPageFinished(WebView view, String url) {
             super.onPageFinished(view, url);
-            if (mCurrentUrl == url) {
+            if (url.equals(mCurrentUrl)) {
                 Log.d(TAG, "Page: Finished " + url);
-                mPageState = PageState.FINISHED;
+                setPageState(PageState.FINISHED);
                 update();
             }
         }
@@ -124,7 +129,7 @@ final class CctvMediaResolver implements IMediaResolver {
         public void onReceivedError(WebView view, WebResourceRequest request, WebResourceError error) {
             super.onReceivedError(view, request, error);
             Log.d(TAG, "Page: Error");
-            mPageState = PageState.ERROR;
+            setPageState(PageState.ERROR);
             update();
         }
 
@@ -132,7 +137,7 @@ final class CctvMediaResolver implements IMediaResolver {
         public void onReceivedHttpError(WebView view, WebResourceRequest request, WebResourceResponse errorResponse) {
             super.onReceivedHttpError(view, request, errorResponse);
             Log.d(TAG, "Page: HTTP Error");
-            mPageState = PageState.ERROR;
+            setPageState(PageState.ERROR);
             update();
         }
     };
@@ -177,6 +182,11 @@ final class CctvMediaResolver implements IMediaResolver {
         }
     }
 
+    private void setPageState(PageState state) {
+        mPageState = state;
+        mPageStateTimestamp = System.currentTimeMillis();
+    }
+
     private void enterIdleState() {
         // We can enter this state many ways.  Reset everything.
         Log.i(TAG, "Idle");
@@ -190,7 +200,7 @@ final class CctvMediaResolver implements IMediaResolver {
             web.clearHistory();
             mWebView.release();
             mWebView = null;
-            mPageState = PageState.NONE;
+            setPageState(PageState.NONE);
         }
 
         mResolveState = ResolveState.IDLE;
@@ -209,14 +219,16 @@ final class CctvMediaResolver implements IMediaResolver {
     }
 
     private void enterLoadingState() {
-        if (mPageState != PageState.LOADING) {
-            // The page is finished or failed, we don't want to do LOADING anymore.
-            Log.d(TAG, "Page state is " + mPageState.toString() + ", loading stopped");
-            onResolved(null);
-        } else {
+        if (mPageState == PageState.LOADING
+                || (mPageState == PageState.FINISHED && (System.currentTimeMillis() - mPageStateTimestamp < PAGE_FINISHED_LOADING_TIMEOUT))) {
+            // Continue looking for the video URL.
             mHandler.postDelayed(mFindVideoRunnable, FIND_VIDEO_INTERVAL);
             mResolveState = ResolveState.LOADING;
             update();
+        } else {
+            // The page is finished or failed, we don't want to do LOADING anymore.
+            Log.d(TAG, "Page state is " + mPageState.toString() + ", loading stopped");
+            onResolved(null);
         }
     }
 
@@ -241,6 +253,7 @@ final class CctvMediaResolver implements IMediaResolver {
                     JSONObject reader = new JSONObject(json);
                     url = reader.getString("src");
                 } catch (JSONException e) {
+                    // The page is loading.  It's ok if this fails sometimes.
                 }
                 if (url == null || url.isEmpty()) {
                     enterLoadingState();
@@ -269,7 +282,7 @@ final class CctvMediaResolver implements IMediaResolver {
                 // Waiting for a WebView to become available
                 break;
             case START:
-                mPageState = PageState.LOADING;
+                setPageState(PageState.LOADING);
                 WebView web = mWebView.get();
                 WebSettings settings = web.getSettings();
                 settings.setUserAgentString("UCWEB/2.0 (iPad; U; CPU OS 7_1 like Mac OS X; en; iPad3,6) U2/1.0.0 UCBrowser/9.3.1.344");
