@@ -83,27 +83,27 @@ public class TvPlayerStatusView extends ConstraintLayout implements TvPlayerList
     public void onTvPlayerStateChanged(TvPlayerState state, float progress) {
         switch (state) {
             case RESOLVING:
-                mText.setText("Resolving " + Integer.toString((int)(progress * 100)) + "%");
+                mText.setText(getContext().getString(R.string.status_resolving_progress, (int)(progress * 100)));
                 setVisible(true);
                 break;
             case CONNECTING:
-                mText.setText("Connecting");
+                mText.setText(getContext().getString(R.string.status_connecting));
                 setVisible(true);
                 break;
             case BUFFERING:
-                mText.setText("Buffering " + Integer.toString((int)(progress * 100)) + "%");
+                mText.setText(getContext().getString(R.string.status_buffering_progress, (int)(progress * 100)));
                 setVisible(true);
                 break;
             case PLAYING:
-                mText.setText("Playing");
+                mText.setText(getContext().getString(R.string.status_playing));
                 setVisible(false);
                 break;
             case PAUSED:
-                mText.setText("Paused");
+                mText.setText(getContext().getString(R.string.status_paused));
                 setVisible(true);
                 break;
             case FAILED:
-                mText.setText("Failed");
+                mText.setText(getContext().getString(R.string.status_failed));
                 setVisible(true);
                 break;
         }

@@ -1,3 +1,9 @@
 <resources>
     <string name="app_name">LanTV</string>
+    <string name="status_resolving_progress">Requesting %1$d%%</string>
+    <string name="status_connecting">Connecting</string>
+    <string name="status_buffering_progress">Buffering %1$d%%</string>
+    <string name="status_playing">Connecting</string>
+    <string name="status_paused">Paused</string>
+    <string name="status_failed">Failed</string>
 </resources>
