@@ -26,27 +26,24 @@ public final class VlcTvPlayerView extends RelativeLayout implements TvPlayer {
     private MediaPlayer mMediaPlayer = null;
     private MediaDetails mMediaDetails = null;
     private MediaResolver mMediaResolver = null;
-    private TvPlayerListener mListener = NULL_LISTENER;
-
-    private static final TvPlayerListener NULL_LISTENER = new TvPlayerListener() {
-        @Override
-        public void onTvPlayerStateChanged(TvPlayerState state, float progress) {}
-    };
+    private TvPlayerListener mListener = null;
+    private TvPlayerState mPreviousState = TvPlayerState.NONE;
+    private float mPreviousStateProgress = 0;
 
     private final MediaResolver.Callback mMediaResolverCallback = new MediaResolver.Callback() {
         @Override
         public void onMediaResolved(MediaDetails details) {
-            mListener.onTvPlayerStateChanged(TvPlayerState.RESOLVING, 1);
+            notifyState(TvPlayerState.RESOLVING, 1);
             mMediaDetails = details;
             if (details == null) {
-                mListener.onTvPlayerStateChanged(TvPlayerState.FAILED, 0);
+                notifyState(TvPlayerState.FAILED, 0);
             }
             resume();
         }
 
         @Override
         public void onMediaResolverProgress(float progress) {
-            mListener.onTvPlayerStateChanged(TvPlayerState.RESOLVING, progress);
+            notifyState(TvPlayerState.RESOLVING, progress);
         }
     };
 
@@ -103,15 +100,15 @@ public final class VlcTvPlayerView extends RelativeLayout implements TvPlayer {
                     break;
                 case MediaPlayer.Event.Opening:
                     Log.d(TAG, "MediaPlayer.Event.Opening");
-                    mListener.onTvPlayerStateChanged(TvPlayerState.CONNECTING, 0);
+                    notifyState(TvPlayerState.CONNECTING, 0);
                     break;
                 case MediaPlayer.Event.Buffering:
                     float buffering = event.getBuffering();
                     Log.d(TAG, "MediaPlayer.Event.Buffering " + Float.toString(buffering));
                     if (buffering == 0) {
-                        mListener.onTvPlayerStateChanged(TvPlayerState.CONNECTING, 0);
+                        notifyState(TvPlayerState.CONNECTING, 0);
                     } else {
-                        mListener.onTvPlayerStateChanged(TvPlayerState.BUFFERING, buffering / 100);
+                        notifyState(TvPlayerState.BUFFERING, buffering / 100);
                     }
                     break;
                 case MediaPlayer.Event.Playing:
@@ -119,18 +116,18 @@ public final class VlcTvPlayerView extends RelativeLayout implements TvPlayer {
                     break;
                 case MediaPlayer.Event.Paused:
                     Log.d(TAG, "MediaPlayer.Event.Paused");
-                    mListener.onTvPlayerStateChanged(TvPlayerState.PAUSED, 0);
+                    notifyState(TvPlayerState.PAUSED, 0);
                     break;
                 case MediaPlayer.Event.Stopped:
                     Log.d(TAG, "MediaPlayer.Event.Stopped");
-                    mListener.onTvPlayerStateChanged(TvPlayerState.PAUSED, 0);
+                    notifyState(TvPlayerState.PAUSED, 0);
                     break;
                 case MediaPlayer.Event.EncounteredError:
                     Log.d(TAG, "MediaPlayer.Event.EncounteredError");
                     break;
                 case MediaPlayer.Event.PositionChanged:
                     Log.d(TAG, "MediaPlayer.Event.PositionChanged " + Float.toString(event.getPositionChanged()));
-                    mListener.onTvPlayerStateChanged(TvPlayerState.PLAYING, 0);
+                    notifyState(TvPlayerState.PLAYING, 0);
                     break;
                 case MediaPlayer.Event.SeekableChanged:
                     Log.d(TAG, "MediaPlayer.Event.SeekableChanged " + Boolean.toString(event.getSeekable()));
@@ -241,7 +238,7 @@ public final class VlcTvPlayerView extends RelativeLayout implements TvPlayer {
         mMediaDetails = null;
         mMediaResolver = mediaResolver;
 
-        mListener.onTvPlayerStateChanged(TvPlayerState.RESOLVING, 0);
+        notifyState(TvPlayerState.RESOLVING, 0);
 
         mMediaResolver.resolve(mMediaResolverCallback);
     }
@@ -252,7 +249,7 @@ public final class VlcTvPlayerView extends RelativeLayout implements TvPlayer {
             return;
         }
 
-        mListener.onTvPlayerStateChanged(TvPlayerState.CONNECTING, 0);
+        notifyState(TvPlayerState.CONNECTING, 0);
 
         Log.i(TAG, "Playing video");
         createPlayer();
@@ -269,9 +266,10 @@ public final class VlcTvPlayerView extends RelativeLayout implements TvPlayer {
             } else {
                 Log.i(TAG, "Stopping streaming video");
                 stop();
-                mListener.onTvPlayerStateChanged(TvPlayerState.PAUSED, 0);
+                notifyState(TvPlayerState.PAUSED, 0);
             }
         } else if (mMediaDetails != null) {
+            // We may resume later, but we definitely don't care about the result now.
             mMediaResolver.cancel(mMediaResolverCallback);
         }
     }
@@ -280,7 +278,13 @@ public final class VlcTvPlayerView extends RelativeLayout implements TvPlayer {
      * Stop video, closing it.
      */
     public void stop() {
+        if (mMediaResolver != null) {
+            mMediaResolver.cancel(mMediaResolverCallback);
+            mMediaResolver = null;
+        }
+        mMediaDetails = null;
         destroyPlayer();
+        mListener.onTvPlayerStateChanged(TvPlayerState.NONE, 0);
     }
 
     private void onResize() {
@@ -305,6 +309,18 @@ public final class VlcTvPlayerView extends RelativeLayout implements TvPlayer {
     }
 
     public void setTvPlayerListener(TvPlayerListener listener) {
-        mListener = listener != null ? listener : NULL_LISTENER;
+        mListener = listener;
+    }
+
+    private void notifyState(TvPlayerState state, float progress) {
+        if (mListener == null) {
+            return;
+        }
+        if (mPreviousState == state && mPreviousStateProgress == progress) {
+            return;
+        }
+        mPreviousState = state;
+        mPreviousStateProgress = progress;
+        mListener.onTvPlayerStateChanged(state, progress);
     }
 }

@@ -106,6 +106,9 @@ public class TvPlayerStatusView extends ConstraintLayout implements TvPlayerList
                 mText.setText(getContext().getString(R.string.status_failed));
                 setVisible(true);
                 break;
+            default:
+                mText.setText("");
+                setVisible(false);
         }
     }
 }

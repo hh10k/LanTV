@@ -75,8 +75,10 @@ final class CctvMediaResolver implements MediaResolver {
         @Override
         public boolean shouldOverrideUrlLoading(WebView view, String url) {
             Log.d(TAG, "Page: Navigating to " + url);
-            mCurrentUrl = url;
-            ++mPageLoadCount;
+            if (!mCurrentUrl.equals(url)) {
+                mCurrentUrl = url;
+                ++mPageLoadCount;
+            }
             return false;
         }
 
