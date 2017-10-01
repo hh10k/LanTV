@@ -5,14 +5,13 @@ import android.os.Bundle;
 import android.view.View;
 import android.webkit.CookieManager;
 import android.webkit.WebView;
-import android.widget.TextView;
 
 import au.id.blackwell.kurt.lantv.utility.LimitedPool;
 
 public final class MainActivity extends AppCompatActivity {
 
     private TvPlayer mVideo;
-    private TextView mVideoStatus;
+    private TvPlayerStatusView mVideoStatus;
     private LimitedPool<WebView> mWebViewPool = new LimitedPool<>();
 
     @Override
@@ -22,35 +21,10 @@ public final class MainActivity extends AppCompatActivity {
         setContentView(R.layout.activity_main);
 
         mVideo = (VlcTvPlayerView) findViewById(R.id.video);
-        mVideoStatus = (TextView) findViewById(R.id.video_status);
+        mVideoStatus = (TvPlayerStatusView) findViewById(R.id.video_status);
         mWebViewPool.addItem((WebView)findViewById(R.id.worker_web_view));
 
-        mVideo.setTvPlayerListener(
-            new TvPlayerListener() {
-                @Override
-                public void onTvPlayerStateChanged(TvPlayerState state, float progress) {
-                    switch (state) {
-                        case RESOLVING:
-                            mVideoStatus.setText("Resolving " + Integer.toString((int)(progress * 100)) + "%");
-                            break;
-                        case CONNECTING:
-                            mVideoStatus.setText("Connecting");
-                            break;
-                        case BUFFERING:
-                            mVideoStatus.setText("Buffering " + Integer.toString((int)(progress * 100)) + "%");
-                            break;
-                        case PLAYING:
-                            mVideoStatus.setText("");
-                            break;
-                        case PAUSED:
-                            mVideoStatus.setText("Paused");
-                            break;
-                        case FAILED:
-                            mVideoStatus.setText("Failed");
-                            break;
-                    }
-                }
-            });
+        mVideo.setTvPlayerListener(mVideoStatus);
 
         // If we set this cookie then it'll allow us to use the HD page.
         // I'm not sure if the quality is actually any better.
