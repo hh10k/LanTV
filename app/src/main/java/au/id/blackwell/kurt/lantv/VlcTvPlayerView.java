@@ -265,6 +265,7 @@ public final class VlcTvPlayerView extends RelativeLayout implements TvPlayer {
             } else {
                 Log.i(TAG, "Stopping streaming video");
                 stop();
+                mListener.onTvPlayerStateChanged(TvPlayerState.PAUSED, 0);
             }
         } else if (mMediaDetails != null) {
             mMediaResolver.cancel(mMediaResolverCallback);
