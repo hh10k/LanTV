@@ -4,7 +4,7 @@ package au.id.blackwell.kurt.lantv;
  * Used by the video player to find, authenticate, etc, the media to play.
  * The player may try to resolve a media URI multiple times in an attempt to recover from an error.
  */
-public interface IMediaResolver {
+public interface MediaResolver {
     /**
      * Request the details for the media.
      * @param callback
@@ -27,7 +27,7 @@ public interface IMediaResolver {
 
         /**
          * Called once the media has been found, and is ready to be accessed.
-         * This may be called immediately by IMediaResolver.resolve or asynchronously.
+         * This may be called immediately by MediaResolver.resolve or asynchronously.
          *
          * @param details Everything needed to play the media.
          */

@@ -16,26 +16,37 @@ import org.videolan.libvlc.MediaPlayer;
 
 import java.util.ArrayList;
 
-public final class VlcVideoView extends RelativeLayout {
+public final class VlcTvPlayerView extends RelativeLayout implements TvPlayer {
 
-    private static final String TAG = "VideoView";
+    private static final String TAG = "VlcTvPlayerView";
 
     private SurfaceView mSurface = null;
     private FrameLayout mSurfaceFrame = null;
     private LibVLC mLibVLC = null;
     private MediaPlayer mMediaPlayer = null;
     private MediaDetails mMediaDetails = null;
-    private IMediaResolver mMediaResolver = null;
+    private MediaResolver mMediaResolver = null;
+    private TvPlayerListener mListener = NULL_LISTENER;
 
-    private final IMediaResolver.Callback mMediaResolverCallback = new IMediaResolver.Callback() {
+    private static final TvPlayerListener NULL_LISTENER = new TvPlayerListener() {
+        @Override
+        public void onTvPlayerStateChanged(TvPlayerState state, float progress) {}
+    };
+
+    private final MediaResolver.Callback mMediaResolverCallback = new MediaResolver.Callback() {
         @Override
         public void onMediaResolved(MediaDetails details) {
+            mListener.onTvPlayerStateChanged(TvPlayerState.RESOLVING, 1);
             mMediaDetails = details;
+            if (details == null) {
+                mListener.onTvPlayerStateChanged(TvPlayerState.FAILED, 0);
+            }
             resume();
         }
 
         @Override
         public void onMediaResolverProgress(float progress) {
+            mListener.onTvPlayerStateChanged(TvPlayerState.RESOLVING, progress);
         }
     };
 
@@ -92,24 +103,34 @@ public final class VlcVideoView extends RelativeLayout {
                     break;
                 case MediaPlayer.Event.Opening:
                     Log.d(TAG, "MediaPlayer.Event.Opening");
+                    mListener.onTvPlayerStateChanged(TvPlayerState.CONNECTING, 0);
                     break;
                 case MediaPlayer.Event.Buffering:
-                    Log.d(TAG, "MediaPlayer.Event.Buffering " + Float.toString(event.getBuffering()));
+                    float buffering = event.getBuffering();
+                    Log.d(TAG, "MediaPlayer.Event.Buffering " + Float.toString(buffering));
+                    if (buffering == 0) {
+                        mListener.onTvPlayerStateChanged(TvPlayerState.CONNECTING, 0);
+                    } else {
+                        mListener.onTvPlayerStateChanged(TvPlayerState.BUFFERING, buffering / 100);
+                    }
                     break;
                 case MediaPlayer.Event.Playing:
                     Log.d(TAG, "MediaPlayer.Event.Playing");
                     break;
                 case MediaPlayer.Event.Paused:
                     Log.d(TAG, "MediaPlayer.Event.Paused");
+                    mListener.onTvPlayerStateChanged(TvPlayerState.PAUSED, 0);
                     break;
                 case MediaPlayer.Event.Stopped:
                     Log.d(TAG, "MediaPlayer.Event.Stopped");
+                    mListener.onTvPlayerStateChanged(TvPlayerState.PAUSED, 0);
                     break;
                 case MediaPlayer.Event.EncounteredError:
                     Log.d(TAG, "MediaPlayer.Event.EncounteredError");
                     break;
                 case MediaPlayer.Event.PositionChanged:
                     Log.d(TAG, "MediaPlayer.Event.PositionChanged " + Float.toString(event.getPositionChanged()));
+                    mListener.onTvPlayerStateChanged(TvPlayerState.PLAYING, 0);
                     break;
                 case MediaPlayer.Event.SeekableChanged:
                     Log.d(TAG, "MediaPlayer.Event.SeekableChanged " + Boolean.toString(event.getSeekable()));
@@ -124,17 +145,17 @@ public final class VlcVideoView extends RelativeLayout {
         }
     };
 
-    public VlcVideoView(Context context) {
+    public VlcTvPlayerView(Context context) {
         super(context);
         init(context);
     }
 
-    public VlcVideoView(Context context, AttributeSet attrs) {
+    public VlcTvPlayerView(Context context, AttributeSet attrs) {
         super(context, attrs);
         init(context);
     }
 
-    public VlcVideoView(Context context, AttributeSet attrs, int defStyle) {
+    public VlcTvPlayerView(Context context, AttributeSet attrs, int defStyle) {
         super(context, attrs, defStyle);
         init(context);
     }
@@ -211,31 +232,29 @@ public final class VlcVideoView extends RelativeLayout {
         mMediaPlayer = null;
     }
 
-    public void play(IMediaResolver mediaResolver) {
+    public void play(MediaResolver mediaResolver) {
         stop();
         mMediaDetails = null;
         mMediaResolver = mediaResolver;
-        // TODO: Track states and make this robust
+
+        mListener.onTvPlayerStateChanged(TvPlayerState.RESOLVING, 0);
+
         mMediaResolver.resolve(mMediaResolverCallback);
     }
 
-    /**
-     * Resume playing the video
-     */
     public void resume() {
         if (mMediaDetails == null) {
             // Nothing to resume
             return;
         }
 
+        mListener.onTvPlayerStateChanged(TvPlayerState.CONNECTING, 0);
+
         Log.i(TAG, "Playing video");
         createPlayer();
         mMediaPlayer.play();
     }
 
-    /**
-     * Pause video, if playing
-     */
     public void pause() {
         if (mMediaPlayer != null) {
             // We are informed via the PausableChanged event whether a video is pausable, but it tells lies.
@@ -278,5 +297,9 @@ public final class VlcVideoView extends RelativeLayout {
             vout.setWindowSize(width, height);
             Log.i(TAG, "Video resized to " + Integer.toString(width) + "x" + Integer.toString(height));
         }
+    }
+
+    public void setTvPlayerListener(TvPlayerListener listener) {
+        mListener = listener != null ? listener : NULL_LISTENER;
     }
 }

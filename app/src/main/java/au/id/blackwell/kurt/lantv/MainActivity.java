@@ -5,12 +5,14 @@ import android.os.Bundle;
 import android.view.View;
 import android.webkit.CookieManager;
 import android.webkit.WebView;
+import android.widget.TextView;
 
 import au.id.blackwell.kurt.lantv.utility.LimitedPool;
 
 public final class MainActivity extends AppCompatActivity {
 
-    private VlcVideoView mVideo;
+    private TvPlayer mVideo;
+    private TextView mVideoStatus;
     private LimitedPool<WebView> mWebViewPool = new LimitedPool<>();
 
     @Override
@@ -18,17 +20,44 @@ public final class MainActivity extends AppCompatActivity {
 
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+        findViewById(android.R.id.content).setSystemUiVisibility(
+            View.SYSTEM_UI_FLAG_LOW_PROFILE
+                | View.SYSTEM_UI_FLAG_FULLSCREEN
+                | View.SYSTEM_UI_FLAG_LAYOUT_STABLE
+                | View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY
+                | View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION
+                | View.SYSTEM_UI_FLAG_HIDE_NAVIGATION);
 
-        mVideo = (VlcVideoView) findViewById(R.id.video);
+        mVideo = (VlcTvPlayerView) findViewById(R.id.video);
+        mVideoStatus = (TextView) findViewById(R.id.video_status);
         mWebViewPool.addItem((WebView)findViewById(R.id.worker_web_view));
 
-        mVideo.setSystemUiVisibility(
-            View.SYSTEM_UI_FLAG_LOW_PROFILE
-            | View.SYSTEM_UI_FLAG_FULLSCREEN
-            | View.SYSTEM_UI_FLAG_LAYOUT_STABLE
-            | View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY
-            | View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION
-            | View.SYSTEM_UI_FLAG_HIDE_NAVIGATION);
+        mVideo.setTvPlayerListener(
+            new TvPlayerListener() {
+                @Override
+                public void onTvPlayerStateChanged(TvPlayerState state, float progress) {
+                    switch (state) {
+                        case RESOLVING:
+                            mVideoStatus.setText("Resolving " + Integer.toString((int)(progress * 100)) + "%");
+                            break;
+                        case CONNECTING:
+                            mVideoStatus.setText("Connecting");
+                            break;
+                        case BUFFERING:
+                            mVideoStatus.setText("Buffering " + Integer.toString((int)(progress * 100)) + "%");
+                            break;
+                        case PLAYING:
+                            mVideoStatus.setText("");
+                            break;
+                        case PAUSED:
+                            mVideoStatus.setText("Paused");
+                            break;
+                        case FAILED:
+                            mVideoStatus.setText("Failed");
+                            break;
+                    }
+                }
+            });
 
         // If we set this cookie then it'll allow us to use the HD page.
         // I'm not sure if the quality is actually any better.
@@ -36,8 +65,8 @@ public final class MainActivity extends AppCompatActivity {
         cookieManager.setCookie("http://tv.cctv.com/", "country_code=CN; path=/live/cctv13");
 
         //MediaDetails media = new MediaDetails(Uri.fromFile((new File("/storage/sdcard/Download/big_buck_bunny.mp4"))));
-        //IMediaResolver resolver = new StaticMediaResolver(media);
-        IMediaResolver resolver = new CctvMediaResolver(mWebViewPool, "http://tv.cctv.com/live/cctv13/hd/index.shtml");
+        //MediaResolver resolver = new StaticMediaResolver(media);
+        MediaResolver resolver = new CctvMediaResolver(mWebViewPool, "http://tv.cctv.com/live/cctv13/hd/index.shtml");
         mVideo.play(resolver);
     }
 

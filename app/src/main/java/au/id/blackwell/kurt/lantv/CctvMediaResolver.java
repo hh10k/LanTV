@@ -23,7 +23,7 @@ import java.util.ArrayList;
 
 import au.id.blackwell.kurt.lantv.utility.Pool;
 
-final class CctvMediaResolver implements IMediaResolver {
+final class CctvMediaResolver implements MediaResolver {
     private static final String TAG = "CctvMediaResolver";
 
     // The maximum number of millseconds to wait after the page has finished
