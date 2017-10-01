@@ -7,6 +7,7 @@ import android.os.Build;
 import android.os.Handler;
 import android.util.Log;
 import android.webkit.ValueCallback;
+import android.webkit.WebChromeClient;
 import android.webkit.WebResourceError;
 import android.webkit.WebResourceRequest;
 import android.webkit.WebResourceResponse;
@@ -55,6 +56,7 @@ final class CctvMediaResolver implements MediaResolver {
     private ResolveState mResolveState = ResolveState.IDLE;
     private PageState mPageState = PageState.NONE;
     private long mPageStateTimestamp = 0;
+    private int mPageLoadCount = 0;
     private final Handler mHandler = new Handler();
 
     private final Pool.Callback mWebViewPoolCallback = new Pool.Callback() {
@@ -73,6 +75,7 @@ final class CctvMediaResolver implements MediaResolver {
         public boolean shouldOverrideUrlLoading(WebView view, String url) {
             Log.d(TAG, "Page: Navigating to " + url);
             mCurrentUrl = url;
+            ++mPageLoadCount;
             return false;
         }
 
@@ -115,6 +118,7 @@ final class CctvMediaResolver implements MediaResolver {
         public void onPageStarted(WebView view, String url, Bitmap favicon) {
             Log.d(TAG, "Page: Started " + url);
             mCurrentUrl = url;
+            ++mPageLoadCount;
         }
 
         @Override
@@ -141,6 +145,24 @@ final class CctvMediaResolver implements MediaResolver {
             Log.d(TAG, "Page: HTTP Error");
             setPageState(PageState.ERROR);
             update();
+        }
+    };
+
+    private final WebChromeClient mWebChromeClient = new WebChromeClient() {
+        @Override
+        public void onProgressChanged(WebView view, int newProgress) {
+            float totalProgress = 0;
+            if (mPageLoadCount > 0) {
+                // Each page has a progress bar of half as much as the previous page.
+                // i.e. The first page is 0..50%, the second page is 50..75%, then 75..87%, etc.
+                float pageProgressRange = (1.0f / (float)Math.pow(2.0, (double)mPageLoadCount));
+                float pageProgressStart = (1.0f - 2.0f * pageProgressRange);
+                totalProgress = pageProgressStart + (pageProgressRange * (float)newProgress / 100.0f);
+            }
+
+            for (Callback callback : mCallbacks) {
+                callback.onMediaResolverProgress(totalProgress);
+            }
         }
     };
 
@@ -198,6 +220,7 @@ final class CctvMediaResolver implements MediaResolver {
         if (mWebView != null) {
             WebView web = mWebView.get();
             web.setWebViewClient(new WebViewClient());
+            web.setWebChromeClient(new WebChromeClient());
             web.loadUrl("about:blank");
             web.clearHistory();
             mWebView.release();
@@ -285,12 +308,14 @@ final class CctvMediaResolver implements MediaResolver {
                 break;
             case START:
                 setPageState(PageState.LOADING);
+                mPageLoadCount = 0;
                 WebView web = mWebView.get();
                 WebSettings settings = web.getSettings();
                 settings.setUserAgentString("UCWEB/2.0 (iPad; U; CPU OS 7_1 like Mac OS X; en; iPad3,6) U2/1.0.0 UCBrowser/9.3.1.344");
                 settings.setJavaScriptEnabled(true);
                 settings.setLoadsImagesAutomatically(false);
                 web.setWebViewClient(mWebViewClient);
+                web.setWebChromeClient(mWebChromeClient);
                 web.loadUrl(mUrl);
 
                 enterLoadingState();
