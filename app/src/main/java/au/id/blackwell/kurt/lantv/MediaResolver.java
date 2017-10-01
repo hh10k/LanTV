@@ -18,7 +18,7 @@ public interface MediaResolver {
      */
     void cancel(Callback callback);
 
-    public interface Callback {
+    interface Callback {
         /**
          * Called whenever some progress is made in receiving the media details.
          * @param progress A value in the range [0, 1)

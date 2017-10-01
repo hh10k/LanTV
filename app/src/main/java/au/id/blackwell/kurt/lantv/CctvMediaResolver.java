@@ -22,6 +22,7 @@ import java.io.ByteArrayInputStream;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 
+import au.id.blackwell.kurt.lantv.utility.NumberUtility;
 import au.id.blackwell.kurt.lantv.utility.Pool;
 
 final class CctvMediaResolver implements MediaResolver {
@@ -151,14 +152,7 @@ final class CctvMediaResolver implements MediaResolver {
     private final WebChromeClient mWebChromeClient = new WebChromeClient() {
         @Override
         public void onProgressChanged(WebView view, int newProgress) {
-            float totalProgress = 0;
-            if (mPageLoadCount > 0) {
-                // Each page has a progress bar of half as much as the previous page.
-                // i.e. The first page is 0..50%, the second page is 50..75%, then 75..87%, etc.
-                float pageProgressRange = (1.0f / (float)Math.pow(2.0, (double)mPageLoadCount));
-                float pageProgressStart = (1.0f - 2.0f * pageProgressRange);
-                totalProgress = pageProgressStart + (pageProgressRange * (float)newProgress / 100.0f);
-            }
+            float totalProgress = (mPageLoadCount == 0) ? 0 : NumberUtility.getProgressForUnboundedStages(mPageLoadCount, newProgress);
 
             for (Callback callback : mCallbacks) {
                 callback.onMediaResolverProgress(totalProgress);
