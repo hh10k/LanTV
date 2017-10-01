@@ -161,6 +161,10 @@ public final class VlcTvPlayerView extends RelativeLayout implements TvPlayer {
     }
 
     private void init(Context context) {
+        if (isInEditMode()) {
+            return;
+        }
+
         // Populate this view based on the layout resource
         LayoutInflater inflater = (LayoutInflater) context.getSystemService(Context.LAYOUT_INFLATER_SERVICE);
         inflater.inflate(R.layout.view_vlc_video, this, true);
