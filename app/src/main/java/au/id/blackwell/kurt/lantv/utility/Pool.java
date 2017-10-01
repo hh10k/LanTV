@@ -1,6 +1,6 @@
-package au.id.blackwell.kurt.lantv;
+package au.id.blackwell.kurt.lantv.utility;
 
-interface IPool<T> {
+public interface Pool<T> {
     interface Item<T> {
         T get();
         void release();

@@ -6,10 +6,12 @@ import android.view.View;
 import android.webkit.CookieManager;
 import android.webkit.WebView;
 
+import au.id.blackwell.kurt.lantv.utility.LimitedPool;
+
 public final class MainActivity extends AppCompatActivity {
 
     private VlcVideoView mVideo;
-    private Pool<WebView> mWebViewPool = new Pool<>();
+    private LimitedPool<WebView> mWebViewPool = new LimitedPool<>();
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {

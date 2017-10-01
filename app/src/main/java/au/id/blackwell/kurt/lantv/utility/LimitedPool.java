@@ -1,11 +1,9 @@
-package au.id.blackwell.kurt.lantv;
-
-import android.os.Looper;
+package au.id.blackwell.kurt.lantv.utility;
 
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 
-public class Pool<T> implements IPool<T> {
+public class LimitedPool<T> implements Pool<T> {
     private final ArrayList<T> mItems = new ArrayList<T>();
     private final ArrayDeque<Callback> mQueue = new ArrayDeque<Callback>();
 

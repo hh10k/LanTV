@@ -21,6 +21,8 @@ import java.io.ByteArrayInputStream;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 
+import au.id.blackwell.kurt.lantv.utility.Pool;
+
 final class CctvMediaResolver implements IMediaResolver {
     private static final String TAG = "CctvMediaResolver";
 
@@ -47,17 +49,17 @@ final class CctvMediaResolver implements IMediaResolver {
     private static final long FIND_VIDEO_INTERVAL = 500;
 
     private String mUrl;
-    private IPool<WebView> mWebViewPool;
-    private IPool.Item<WebView> mWebView;
+    private Pool<WebView> mWebViewPool;
+    private Pool.Item<WebView> mWebView;
     private ArrayList<Callback> mCallbacks = new ArrayList<Callback>();
     private ResolveState mResolveState = ResolveState.IDLE;
     private PageState mPageState = PageState.NONE;
     private long mPageStateTimestamp = 0;
     private final Handler mHandler = new Handler();
 
-    private final IPool.Callback mWebViewPoolCallback = new IPool.Callback() {
+    private final Pool.Callback mWebViewPoolCallback = new Pool.Callback() {
         @Override
-        public void run(IPool.Item item) {
+        public void run(Pool.Item item) {
             mWebView = item;
             enterStartState();
         }
@@ -149,7 +151,7 @@ final class CctvMediaResolver implements IMediaResolver {
         }
     };
 
-    public CctvMediaResolver(IPool<WebView> webViewPool, String url) {
+    public CctvMediaResolver(Pool<WebView> webViewPool, String url) {
         mWebViewPool = webViewPool;
         mUrl = url;
     }
