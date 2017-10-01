@@ -4,11 +4,14 @@ import android.content.Context;
 import android.support.constraint.ConstraintLayout;
 import android.util.AttributeSet;
 import android.view.LayoutInflater;
+import android.view.View;
 import android.view.animation.Animation;
 import android.view.animation.AnimationUtils;
 import android.widget.TextView;
 
 public class TvPlayerStatusView extends ConstraintLayout implements TvPlayerListener {
+    private View mSlider;
+    private TextView mTitle;
     private TextView mText;
     private boolean mVisible = false;
 
@@ -36,7 +39,13 @@ public class TvPlayerStatusView extends ConstraintLayout implements TvPlayerList
         LayoutInflater inflater = (LayoutInflater) context.getSystemService(Context.LAYOUT_INFLATER_SERVICE);
         inflater.inflate(R.layout.view_tv_player_status, this, true);
 
+        mSlider = (View) findViewById(R.id.slider);
+        mTitle = (TextView) findViewById(R.id.title);
         mText = (TextView) findViewById(R.id.text);
+    }
+
+    public void setTitle(String title) {
+        mTitle.setText(title);
     }
 
     private void setVisible(boolean visible) {
@@ -59,14 +68,14 @@ public class TvPlayerStatusView extends ConstraintLayout implements TvPlayerList
 
                 @Override
                 public void onAnimationEnd(Animation animation) {
-                    mText.clearAnimation();
-                    mText.setVisibility(GONE);
+                    mSlider.clearAnimation();
+                    mSlider.setVisibility(GONE);
                 }
             });
-            mText.startAnimation(anim);
+            mSlider.startAnimation(anim);
         } else {
-            mText.clearAnimation();
-            mText.setVisibility(VISIBLE);
+            mSlider.clearAnimation();
+            mSlider.setVisibility(VISIBLE);
         }
     }
 

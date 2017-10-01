@@ -13,6 +13,12 @@ public final class MainActivity extends AppCompatActivity {
     private TvPlayer mVideo;
     private TvPlayerStatusView mVideoStatus;
     private LimitedPool<WebView> mWebViewPool = new LimitedPool<>();
+    private MediaResolverFactory mMediaResolverFactory = new MediaResolverFactory(mWebViewPool);
+
+    private static final TvChannel[] TV_CHANNELS = new TvChannel[] {
+        //new TvChannel("Test", Uri.fromFile(new File("/storage/sdcard/Download/big_buck_bunny.mp4"))),
+        new TvChannel("CCTV13", "cctv://tv.cctv.com/live/cctv13/hd/index.shtml"),
+    };
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -31,10 +37,11 @@ public final class MainActivity extends AppCompatActivity {
         CookieManager cookieManager = CookieManager.getInstance();
         cookieManager.setCookie("http://tv.cctv.com/", "country_code=CN; path=/live/cctv13");
 
-        //MediaDetails media = new MediaDetails(Uri.fromFile((new File("/storage/sdcard/Download/big_buck_bunny.mp4"))));
-        //MediaResolver resolver = new StaticMediaResolver(media);
-        MediaResolver resolver = new CctvMediaResolver(mWebViewPool, "http://tv.cctv.com/live/cctv13/hd/index.shtml");
+        TvChannel channel = TV_CHANNELS[0];
+        MediaResolver resolver = mMediaResolverFactory.create(channel.getMediaResolveUri());
+        mVideoStatus.setTitle(channel.getTitle());
         mVideo.play(resolver);
+
     }
 
     @Override
