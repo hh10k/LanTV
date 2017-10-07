@@ -272,7 +272,7 @@ final class CctvMediaResolver implements MediaResolver {
                 String url = null;
                 try {
                     JSONObject reader = new JSONObject(json);
-                    url = reader.getString("src");
+                    url = reader.optString("src");
                 } catch (JSONException e) {
                     // The page is loading.  It's ok if this fails sometimes.
                 }
