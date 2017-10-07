@@ -132,7 +132,7 @@ public final class MainActivity extends AppCompatActivity {
         mChannelIndex = channelIndex;
         TvChannel channel = TV_CHANNELS[channelIndex];
 
-        if (mPlayerType != null && mPlayerType != channel.getPlayerType()) {
+        if (mPlayerType != null && !mPlayerType.equals(channel.getPlayerType())) {
             // Throw away old player
             mPlayer.stop();
             mPlayer.setTvPlayerListener(null);
