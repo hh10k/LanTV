@@ -8,5 +8,6 @@
 /captures
 .externalNativeBuild
 
-# Ignore libvlc.aar, it's GPL is poison
+# Ignore libs that should be built elsewhere
 /app/libs/libvlc.aar
+/app/libs/vitamio.aar

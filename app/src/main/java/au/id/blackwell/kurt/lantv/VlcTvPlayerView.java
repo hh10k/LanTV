@@ -235,7 +235,6 @@ public final class VlcTvPlayerView extends RelativeLayout implements TvPlayer {
 
     public void play(MediaResolver mediaResolver) {
         stop();
-        mMediaDetails = null;
         mMediaResolver = mediaResolver;
 
         notifyState(TvPlayerState.RESOLVING, 0);

@@ -8,6 +8,7 @@ import android.webkit.CookieManager;
 import android.webkit.WebView;
 
 import au.id.blackwell.kurt.lantv.utility.LimitedPool;
+import io.vov.vitamio.LibsChecker;
 
 public final class MainActivity extends AppCompatActivity {
 
@@ -41,11 +42,14 @@ public final class MainActivity extends AppCompatActivity {
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
-
         super.onCreate(savedInstanceState);
+
+        if (!LibsChecker.checkVitamioLibs(this))
+            return;
+
         setContentView(R.layout.activity_main);
 
-        mVideo = (VlcTvPlayerView) findViewById(R.id.video);
+        mVideo = (TvPlayer) findViewById(R.id.video);
         mVideoStatus = (TvPlayerStatusView) findViewById(R.id.video_status);
         mWebViewPool.addItem((WebView)findViewById(R.id.worker_web_view));
 
@@ -90,16 +94,20 @@ public final class MainActivity extends AppCompatActivity {
 
     @Override
     public boolean onKeyDown(int keyCode, KeyEvent event) {
+        boolean handled = false;
+
         switch (keyCode) {
             case KeyEvent.KEYCODE_DPAD_UP:
                 setTvChannel((mChannelIndex + 1) % TV_CHANNELS.length);
+                handled = true;
                 break;
             case KeyEvent.KEYCODE_DPAD_DOWN:
                 setTvChannel((mChannelIndex + TV_CHANNELS.length - 1) % TV_CHANNELS.length);
+                handled = true;
                 break;
         }
 
-        return false;
+        return handled;
     }
 
     private void setTvChannel(int channelIndex) {
