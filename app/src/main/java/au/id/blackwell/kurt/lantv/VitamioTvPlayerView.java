@@ -4,6 +4,7 @@ import android.content.Context;
 import android.util.AttributeSet;
 import android.util.Log;
 import android.view.LayoutInflater;
+import android.view.View;
 import android.widget.RelativeLayout;
 
 import io.vov.vitamio.MediaPlayer;
@@ -142,5 +143,9 @@ public class VitamioTvPlayerView  extends RelativeLayout implements TvPlayer {
             return;
         }
         mListener.onTvPlayerStateChanged(state, progress);
+    }
+
+    public View getView() {
+        return this;
     }
 }

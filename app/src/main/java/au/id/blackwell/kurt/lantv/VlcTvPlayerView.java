@@ -322,4 +322,8 @@ public final class VlcTvPlayerView extends RelativeLayout implements TvPlayer {
         mPreviousStateProgress = progress;
         mListener.onTvPlayerStateChanged(state, progress);
     }
+
+    public View getView() {
+        return this;
+    }
 }

@@ -4,6 +4,7 @@ import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.view.KeyEvent;
 import android.view.View;
+import android.view.ViewGroup;
 import android.webkit.CookieManager;
 import android.webkit.WebView;
 
@@ -12,32 +13,35 @@ import io.vov.vitamio.LibsChecker;
 
 public final class MainActivity extends AppCompatActivity {
 
-    private TvPlayer mVideo;
-    private TvPlayerStatusView mVideoStatus;
-    private LimitedPool<WebView> mWebViewPool = new LimitedPool<>();
-    private MediaResolverFactory mMediaResolverFactory = new MediaResolverFactory(mWebViewPool);
+    private String mPlayerType;
+    private TvPlayer mPlayer;
+    private static final TvPlayerFactory mPlayerFactory = new TvPlayerFactory();
+    private ViewGroup mPlayerFrame;
+    private TvPlayerStatusView mPlayerStatus;
+    private final LimitedPool<WebView> mWebViewPool = new LimitedPool<>();
+    private final MediaResolverFactory mMediaResolverFactory = new MediaResolverFactory(mWebViewPool);
     private int mChannelIndex = -1;
 
     private static final String DEFAULT_TV_CHANNEL_ID = "cctv13";
     private static final TvChannel[] TV_CHANNELS = new TvChannel[] {
-        new TvChannel("cctv1", "CCTV-1 综合", "cctv://tv.cctv.com/live/cctv1/hd/"),
-        // Unavailable online: new TvChannel("cctv2", "CCTV-2 财经", "cctv://tv.cctv.com/live/cctv2/hd/"),
-        new TvChannel("cctv3", "CCTV-3 综艺", "cctv://tv.cctv.com/live/cctv3/hd/"),
-        new TvChannel("cctv4", "CCTV-4 亚洲", "cctv://tv.cctv.com/live/cctv4/hd/"),
-        new TvChannel("cctveurope", "CCTV-4 欧洲", "cctv://tv.cctv.com/live/cctveurope/hd/"),
-        new TvChannel("cctvamerica", "CCTV-4 美洲", "cctv://tv.cctv.com/live/cctvamerica/hd/"),
-        // Unavailable in my region: new TvChannel("cctv5", "CCTV-5 体育", "cctv://tv.cctv.com/live/cctv5/hd/"),
-        // Unavailable in my region: new TvChannel("cctv5plus", "CCTV-5+ 体育赛事", "cctv://tv.cctv.com/live/cctv5plus/hd/"),
-        // Unavailable online: new TvChannel("cctv6", "CCTV-6 电影", "cctv://tv.cctv.com/live/cctv6/hd/"),
-        new TvChannel("cctv7", "CCTV-7 军事农业", "cctv://tv.cctv.com/live/cctv7/hd/"),
-        // Unavailable online: new TvChannel("cctv8", "CCTV-8 电视剧", "cctv://tv.cctv.com/live/cctv8/hd/"),
-        // Unavailable online: new TvChannel("cctvjilu", "CCTV-9 纪录", "cctv://tv.cctv.com/live/cctvjilu/hd/"),
-        new TvChannel("cctv10", "CCTV-10 科教", "cctv://tv.cctv.com/live/cctv10/hd/"),
-        new TvChannel("cctv11", "CCTV-11 戏曲", "cctv://tv.cctv.com/live/cctv11/hd/"),
-        new TvChannel("cctv12", "CCTV-12 社会与法", "cctv://tv.cctv.com/live/cctv12/hd/"),
-        new TvChannel("cctv13", "CCTV-13 新闻", "cctv://tv.cctv.com/live/cctv13/hd/"),
-        new TvChannel("cctvchild", "CCTV-14 少儿", "cctv://tv.cctv.com/live/cctvchild/hd/"),
-        new TvChannel("cctv15", "CCTV-15 音乐", "cctv://tv.cctv.com/live/cctv15/hd/"),
+        new TvChannel("cctv1", "CCTV-1 综合", TvPlayerFactory.VITAMIO, "cctv://tv.cctv.com/live/cctv1/hd/"),
+        new TvChannel("cctv2", "CCTV-2 财经", null /* unavailable online */, "cctv://tv.cctv.com/live/cctv2/hd/"),
+        new TvChannel("cctv3", "CCTV-3 综艺", TvPlayerFactory.VITAMIO, "cctv://tv.cctv.com/live/cctv3/hd/"),
+        new TvChannel("cctv4", "CCTV-4 亚洲", TvPlayerFactory.VITAMIO, "cctv://tv.cctv.com/live/cctv4/hd/"),
+        new TvChannel("cctveurope", "CCTV-4 欧洲", TvPlayerFactory.VITAMIO, "cctv://tv.cctv.com/live/cctveurope/hd/"),
+        new TvChannel("cctvamerica", "CCTV-4 美洲", TvPlayerFactory.VITAMIO, "cctv://tv.cctv.com/live/cctvamerica/hd/"),
+        new TvChannel("cctv5", "CCTV-5 体育", null /* unavailable in my region */, "cctv://tv.cctv.com/live/cctv5/hd/"),
+        new TvChannel("cctv5plus", "CCTV-5+ 体育赛事", null /* unavailable in my region */, "cctv://tv.cctv.com/live/cctv5plus/hd/"),
+        new TvChannel("cctv6", "CCTV-6 电影", null /* unavailable online */, "cctv://tv.cctv.com/live/cctv6/hd/"),
+        new TvChannel("cctv7", "CCTV-7 军事农业", TvPlayerFactory.VITAMIO, "cctv://tv.cctv.com/live/cctv7/hd/"),
+        new TvChannel("cctv8", "CCTV-8 电视剧", null /* unavailable online */, "cctv://tv.cctv.com/live/cctv8/hd/"),
+        new TvChannel("cctvjilu", "CCTV-9 纪录", null /* unavailable online */, "cctv://tv.cctv.com/live/cctvjilu/hd/"),
+        new TvChannel("cctv10", "CCTV-10 科教", TvPlayerFactory.VITAMIO, "cctv://tv.cctv.com/live/cctv10/hd/"),
+        new TvChannel("cctv11", "CCTV-11 戏曲", TvPlayerFactory.VITAMIO, "cctv://tv.cctv.com/live/cctv11/hd/"),
+        new TvChannel("cctv12", "CCTV-12 社会与法", TvPlayerFactory.VITAMIO, "cctv://tv.cctv.com/live/cctv12/hd/"),
+        new TvChannel("cctv13", "CCTV-13 新闻", TvPlayerFactory.VITAMIO, "cctv://tv.cctv.com/live/cctv13/hd/"),
+        new TvChannel("cctvchild", "CCTV-14 少儿", TvPlayerFactory.VITAMIO, "cctv://tv.cctv.com/live/cctvchild/hd/"),
+        new TvChannel("cctv15", "CCTV-15 音乐", TvPlayerFactory.VITAMIO, "cctv://tv.cctv.com/live/cctv15/hd/"),
     };
 
     @Override
@@ -49,11 +53,9 @@ public final class MainActivity extends AppCompatActivity {
 
         setContentView(R.layout.activity_main);
 
-        mVideo = (TvPlayer) findViewById(R.id.video);
-        mVideoStatus = (TvPlayerStatusView) findViewById(R.id.video_status);
+        mPlayerFrame = (ViewGroup) findViewById(R.id.player_frame);
+        mPlayerStatus = (TvPlayerStatusView) findViewById(R.id.player_status);
         mWebViewPool.addItem((WebView)findViewById(R.id.worker_web_view));
-
-        mVideo.setTvPlayerListener(mVideoStatus);
 
         // If we set this cookie then it'll allow us to use the HD page.
         // I'm not sure if the quality is actually any better.
@@ -83,13 +85,13 @@ public final class MainActivity extends AppCompatActivity {
                 | View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION
                 | View.SYSTEM_UI_FLAG_HIDE_NAVIGATION);
 
-        mVideo.resume();
+        mPlayer.resume();
     }
 
     @Override
     protected void onStop() {
         super.onStop();
-        mVideo.pause();
+        mPlayer.pause();
     }
 
     @Override
@@ -98,16 +100,28 @@ public final class MainActivity extends AppCompatActivity {
 
         switch (keyCode) {
             case KeyEvent.KEYCODE_DPAD_UP:
-                setTvChannel((mChannelIndex + 1) % TV_CHANNELS.length);
+                stepTvChannel(1);
                 handled = true;
                 break;
             case KeyEvent.KEYCODE_DPAD_DOWN:
-                setTvChannel((mChannelIndex + TV_CHANNELS.length - 1) % TV_CHANNELS.length);
+                stepTvChannel(-1);
                 handled = true;
                 break;
         }
 
         return handled;
+    }
+
+    private void stepTvChannel(int direction) {
+        int channelIndex = mChannelIndex;
+        int step = TV_CHANNELS.length + direction;
+
+        do {
+            channelIndex = (channelIndex + step) % TV_CHANNELS.length;
+        } while (!TV_CHANNELS[channelIndex].isPlayable()
+                && channelIndex != mChannelIndex);
+
+        setTvChannel(channelIndex);
     }
 
     private void setTvChannel(int channelIndex) {
@@ -118,8 +132,23 @@ public final class MainActivity extends AppCompatActivity {
         mChannelIndex = channelIndex;
         TvChannel channel = TV_CHANNELS[channelIndex];
 
+        if (mPlayerType != null && mPlayerType != channel.getPlayerType()) {
+            // Throw away old player
+            mPlayer.stop();
+            mPlayer.setTvPlayerListener(null);
+            mPlayerFrame.removeView(mPlayer.getView());
+            mPlayerType = null;
+        }
+        if (mPlayerType == null) {
+            // Install new player
+            mPlayerType = TV_CHANNELS[channelIndex].getPlayerType();
+            mPlayer = mPlayerFactory.create(mPlayerType, this);
+            mPlayer.setTvPlayerListener(mPlayerStatus);
+            mPlayerFrame.addView(mPlayer.getView());
+        }
+
         MediaResolver resolver = mMediaResolverFactory.create(channel.getMediaResolveUri());
-        mVideoStatus.setTitle(channel.getTitle());
-        mVideo.play(resolver);
+        mPlayerStatus.setTitle(channel.getTitle());
+        mPlayer.play(resolver);
     }
 }

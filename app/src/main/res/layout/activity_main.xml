@@ -6,13 +6,14 @@
     android:layout_height="match_parent"
     tools:context="au.id.blackwell.kurt.lantv.MainActivity">
 
-    <au.id.blackwell.kurt.lantv.VitamioTvPlayerView
-        android:id="@+id/video"
+
+    <RelativeLayout
+        android:id="@+id/player_frame"
         android:layout_width="match_parent"
         android:layout_height="match_parent" />
 
     <au.id.blackwell.kurt.lantv.TvPlayerStatusView
-        android:id="@+id/video_status"
+        android:id="@+id/player_status"
         android:layout_width="match_parent"
         android:layout_height="match_parent" />
 

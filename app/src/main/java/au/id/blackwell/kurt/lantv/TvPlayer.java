@@ -1,5 +1,7 @@
 package au.id.blackwell.kurt.lantv;
 
+import android.view.View;
+
 interface TvPlayer {
     /**
      * Start playing the given video.
@@ -26,4 +28,9 @@ interface TvPlayer {
      * @param listener
      */
     void setTvPlayerListener(TvPlayerListener listener);
+
+    /**
+     * Get the view for this player.
+     */
+    View getView();
 }
