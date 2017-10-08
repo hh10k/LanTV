@@ -326,4 +326,8 @@ public final class VlcTvPlayerView extends RelativeLayout implements TvPlayer {
     public View getView() {
         return this;
     }
+
+    public void release() {
+        mMediaPlayer.release();
+    }
 }

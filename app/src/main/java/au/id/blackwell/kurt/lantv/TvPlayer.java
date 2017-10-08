@@ -33,4 +33,9 @@ interface TvPlayer {
      * Get the view for this player.
      */
     View getView();
+
+    /**
+     * Release resources from player
+     */
+    void release();
 }

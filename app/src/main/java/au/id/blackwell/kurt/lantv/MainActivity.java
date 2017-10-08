@@ -1,5 +1,6 @@
 package au.id.blackwell.kurt.lantv;
 
+import android.media.AudioManager;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.view.KeyEvent;
@@ -52,6 +53,7 @@ public final class MainActivity extends AppCompatActivity {
             return;
 
         setContentView(R.layout.activity_main);
+        setVolumeControlStream(AudioManager.STREAM_MUSIC);
 
         mPlayerFrame = (ViewGroup) findViewById(R.id.player_frame);
         mPlayerStatus = (TvPlayerStatusView) findViewById(R.id.player_status);
@@ -74,8 +76,8 @@ public final class MainActivity extends AppCompatActivity {
     }
 
     @Override
-    protected void onStart() {
-        super.onStart();
+    protected void onResume() {
+        super.onResume();
 
         findViewById(android.R.id.content).setSystemUiVisibility(
             View.SYSTEM_UI_FLAG_LOW_PROFILE
@@ -89,8 +91,8 @@ public final class MainActivity extends AppCompatActivity {
     }
 
     @Override
-    protected void onStop() {
-        super.onStop();
+    protected void onPause() {
+        super.onPause();
         mPlayer.pause();
     }
 
@@ -137,6 +139,8 @@ public final class MainActivity extends AppCompatActivity {
             mPlayer.stop();
             mPlayer.setTvPlayerListener(null);
             mPlayerFrame.removeView(mPlayer.getView());
+            mPlayer.release();
+            mPlayer = null;
             mPlayerType = null;
         }
         if (mPlayerType == null) {
