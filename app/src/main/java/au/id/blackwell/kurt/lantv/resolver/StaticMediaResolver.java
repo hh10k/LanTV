@@ -1,4 +1,6 @@
-package au.id.blackwell.kurt.lantv;
+package au.id.blackwell.kurt.lantv.resolver;
+
+import au.id.blackwell.kurt.lantv.MediaDetails;
 
 /**
  * Immediately provides the media that it was constructed with.

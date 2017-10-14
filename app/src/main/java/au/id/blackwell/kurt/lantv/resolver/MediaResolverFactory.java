@@ -1,11 +1,12 @@
-package au.id.blackwell.kurt.lantv;
+package au.id.blackwell.kurt.lantv.resolver;
 
 import android.net.Uri;
 import android.webkit.WebView;
 
+import au.id.blackwell.kurt.lantv.MediaDetails;
 import au.id.blackwell.kurt.lantv.utility.Pool;
 
-final class MediaResolverFactory {
+public final class MediaResolverFactory {
     Pool<WebView> mWebViewPool;
 
     public MediaResolverFactory(Pool<WebView> webViewPool) {

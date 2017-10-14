@@ -9,7 +9,10 @@ import android.view.animation.Animation;
 import android.view.animation.AnimationUtils;
 import android.widget.TextView;
 
-public class TvPlayerStatusView extends ConstraintLayout implements TvPlayerListener {
+import au.id.blackwell.kurt.lantv.player.TvPlayerStatusListener;
+import au.id.blackwell.kurt.lantv.player.TvPlayerState;
+
+public class TvPlayerStatusView extends ConstraintLayout implements TvPlayerStatusListener {
     private View mSlider;
     private TextView mTitle;
     private TextView mText;

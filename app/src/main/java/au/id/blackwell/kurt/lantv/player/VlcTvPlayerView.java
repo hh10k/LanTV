@@ -1,4 +1,4 @@
-package au.id.blackwell.kurt.lantv;
+package au.id.blackwell.kurt.lantv.player;
 
 import android.content.Context;
 import android.util.AttributeSet;
@@ -16,7 +16,11 @@ import org.videolan.libvlc.MediaPlayer;
 
 import java.util.ArrayList;
 
-public final class VlcTvPlayerView extends RelativeLayout implements TvPlayer {
+import au.id.blackwell.kurt.lantv.MediaDetails;
+import au.id.blackwell.kurt.lantv.resolver.MediaResolver;
+import au.id.blackwell.kurt.lantv.R;
+
+final class VlcTvPlayerView extends RelativeLayout implements TvPlayer {
 
     private static final String TAG = "VlcTvPlayerView";
 
@@ -26,7 +30,7 @@ public final class VlcTvPlayerView extends RelativeLayout implements TvPlayer {
     private MediaPlayer mMediaPlayer = null;
     private MediaDetails mMediaDetails = null;
     private MediaResolver mMediaResolver = null;
-    private TvPlayerListener mListener = null;
+    private TvPlayerStatusListener mListener = null;
     private TvPlayerState mPreviousState = TvPlayerState.NONE;
     private float mPreviousStateProgress = 0;
 
@@ -307,7 +311,7 @@ public final class VlcTvPlayerView extends RelativeLayout implements TvPlayer {
         }
     }
 
-    public void setTvPlayerListener(TvPlayerListener listener) {
+    public void setTvPlayerListener(TvPlayerStatusListener listener) {
         mListener = listener;
     }
 

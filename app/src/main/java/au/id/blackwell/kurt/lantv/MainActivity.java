@@ -9,6 +9,10 @@ import android.view.ViewGroup;
 import android.webkit.CookieManager;
 import android.webkit.WebView;
 
+import au.id.blackwell.kurt.lantv.player.TvPlayer;
+import au.id.blackwell.kurt.lantv.player.TvPlayerFactory;
+import au.id.blackwell.kurt.lantv.resolver.MediaResolver;
+import au.id.blackwell.kurt.lantv.resolver.MediaResolverFactory;
 import au.id.blackwell.kurt.lantv.utility.LimitedPool;
 import io.vov.vitamio.LibsChecker;
 

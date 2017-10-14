@@ -1,8 +1,10 @@
-package au.id.blackwell.kurt.lantv;
+package au.id.blackwell.kurt.lantv.player;
 
 import android.view.View;
 
-interface TvPlayer {
+import au.id.blackwell.kurt.lantv.resolver.MediaResolver;
+
+public interface TvPlayer {
     /**
      * Start playing the given video.
      */
@@ -27,7 +29,7 @@ interface TvPlayer {
      * Set a listener to be told of the playback status
      * @param listener
      */
-    void setTvPlayerListener(TvPlayerListener listener);
+    void setTvPlayerListener(TvPlayerStatusListener listener);
 
     /**
      * Get the view for this player.

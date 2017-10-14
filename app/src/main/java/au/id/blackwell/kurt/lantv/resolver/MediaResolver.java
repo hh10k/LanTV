@@ -1,4 +1,6 @@
-package au.id.blackwell.kurt.lantv;
+package au.id.blackwell.kurt.lantv.resolver;
+
+import au.id.blackwell.kurt.lantv.MediaDetails;
 
 /**
  * Used by the video player to find, authenticate, etc, the media to play.

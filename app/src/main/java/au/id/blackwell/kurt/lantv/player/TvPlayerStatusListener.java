@@ -1,6 +1,8 @@
-package au.id.blackwell.kurt.lantv;
+package au.id.blackwell.kurt.lantv.player;
 
-interface TvPlayerListener {
+import au.id.blackwell.kurt.lantv.player.TvPlayerState;
+
+public interface TvPlayerStatusListener {
     /**
      * Called when the player state has changed
      * @param state The current state.

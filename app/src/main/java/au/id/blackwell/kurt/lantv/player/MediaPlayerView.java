@@ -1,4 +1,4 @@
-package au.id.blackwell.kurt.lantv;
+package au.id.blackwell.kurt.lantv.player;
 
 import android.content.Context;
 import android.graphics.PixelFormat;
@@ -12,11 +12,13 @@ import android.widget.RelativeLayout;
 
 import java.io.IOException;
 
-import io.vov.vitamio.MediaPlayer;
+import au.id.blackwell.kurt.lantv.MediaDetails;
+import au.id.blackwell.kurt.lantv.resolver.MediaResolver;
+import au.id.blackwell.kurt.lantv.R;
 
-public class VitamioTvPlayerView  extends RelativeLayout implements TvPlayer {
+public abstract class MediaPlayerView extends RelativeLayout implements TvPlayer {
 
-    private static final String TAG = "VitamioTvPlayerView";
+    private static final String TAG = "TvMediaPlayerView";
 
     enum MediaDetailsState {
         UNRESOLVED,
@@ -32,7 +34,6 @@ public class VitamioTvPlayerView  extends RelativeLayout implements TvPlayer {
         PREPARED,
         STARTED,
         PAUSED,
-        STOPPED,
         PLAYBACK_COMPLETE,
         ERROR,
     }
@@ -45,20 +46,18 @@ public class VitamioTvPlayerView  extends RelativeLayout implements TvPlayer {
 
     // RGBA video does not seem to be supported on the MoonBox and results in a sort of corrupted appearance.
     // TODO: Investigate whether this is because of a format mismatch, or whether we can detect the format of the device.
-    private static final int mSurfacePixelFormat = PixelFormat.RGB_565;
-    //private static final int mSurfacePixelFormat = PixelFormat.RGBA_8888;
-    private static final int mMediaPlayerVideoChroma = MediaPlayer.VIDEOCHROMA_RGB565;
-    //private static final int mMediaPlayerVideoChroma = MediaPlayer.VIDEOCHROMA_RGBA;
+    protected static final int mSurfacePixelFormat = PixelFormat.RGB_565;
+    //protected static final int mSurfacePixelFormat = PixelFormat.RGBA_8888;
 
 
-    private TvPlayerListener mListener = null;
+    private TvPlayerStatusListener mListener = null;
     private SurfaceView mSurfaceView = null;
     private SurfaceHolder mSurfaceHolder = null;
     private int mSurfaceWidth = 0;
     private int mSurfaceHeight = 0;
     private int mSurfaceFormat = 0;
     private boolean mSurfaceCreated = false;
-    private MediaPlayer mMediaPlayer = null;
+    private TvMediaPlayer mMediaPlayer = null;
     private MediaPlayerState mMediaPlayerState = MediaPlayerState.NONE;
     private MediaDetails mMediaDetails = null;
     private MediaDetailsState mMediaDetailsState = MediaDetailsState.UNRESOLVED;
@@ -116,39 +115,33 @@ public class VitamioTvPlayerView  extends RelativeLayout implements TvPlayer {
         }
     };
 
-    private final MediaPlayer.OnPreparedListener mMediaPlayerOnPreparedListener = new MediaPlayer.OnPreparedListener() {
+    private final TvMediaPlayerListener mMediaPlayerListener = new TvMediaPlayerListener() {
         @Override
-        public void onPrepared(MediaPlayer mediaPlayer) {
+        public void onPrepared() {
             Log.d(TAG, "MediaPlayer prepared");
             mMediaPlayerState = MediaPlayerState.PREPARED;
             update();
         }
-    };
 
-    private final MediaPlayer.OnBufferingUpdateListener mMediaPlayerOnBufferingUpdateListener = new MediaPlayer.OnBufferingUpdateListener() {
         @Override
-        public void onBufferingUpdate(MediaPlayer mediaPlayer, int progress) {
-            if (mediaPlayer.isPlaying()) {
+        public void onBufferingUpdate(int progress) {
+            if (mMediaPlayer.isPlaying()) {
                 onChangeState(TvPlayerState.PLAYING, 0);
             } else {
                 onChangeState(TvPlayerState.BUFFERING, (float)progress / 100);
             }
         }
-    };
 
-    private final MediaPlayer.OnErrorListener mMediaPlayerOnErrorListener = new MediaPlayer.OnErrorListener() {
         @Override
-        public boolean onError(MediaPlayer mediaPlayer, int what, int extra) {
+        public boolean onError(int what, int extra) {
             Log.i(TAG, String.format("Error during playback: what=%d, extra=%d", what, extra));
             mMediaPlayerState = MediaPlayerState.ERROR;
             onFailureState(getContext().getString(R.string.error_vitamio_playback));
             return false;
         }
-    };
 
-    private final MediaPlayer.OnVideoSizeChangedListener mMediaPlayerOnVideoSizeChangedListener = new MediaPlayer.OnVideoSizeChangedListener() {
         @Override
-        public void onVideoSizeChanged(MediaPlayer mediaPlayer, int width, int height) {
+        public void onVideoSizeChanged(int width, int height) {
             if (mVideoWidth != width || mVideoHeight != height) {
                 Log.i(TAG, String.format("Video dimensions changed: (%d x %d)", width, height));
                 mVideoWidth = width;
@@ -156,82 +149,39 @@ public class VitamioTvPlayerView  extends RelativeLayout implements TvPlayer {
                 update();
             }
         }
-    };
 
-    private final MediaPlayer.OnInfoListener mMediaPlayerOnInfoListener = new MediaPlayer.OnInfoListener() {
         @Override
-        public boolean onInfo(MediaPlayer mediaPlayer, int what, int extra) {
+        public boolean onInfo(int what, int extra) {
             Log.d(TAG, String.format("Media player info %d, %d", what, extra));
             return false;
         }
-    };
 
-    private final MediaPlayer.OnCompletionListener mMediaPlayerOnCompletionListener = new MediaPlayer.OnCompletionListener() {
         @Override
-        public void onCompletion(MediaPlayer mediaPlayer) {
+        public void onCompletion() {
             mMediaPlayerState = MediaPlayerState.PLAYBACK_COMPLETE;
             Log.d(TAG, "Playback complete");
         }
     };
 
-    private final MediaPlayer.OnHWRenderFailedListener mMediaPlayerOnHWRenderFailedListener = new MediaPlayer.OnHWRenderFailedListener() {
-        @Override
-        public void onFailed() {
-            Log.d(TAG, "Hardware renderer failed");
-        }
-    };
-
-    private final MediaPlayer.OnCachingUpdateListener mMediaPlayerOnCachingUpdateListener = new MediaPlayer.OnCachingUpdateListener() {
-        @Override
-        public void onCachingUpdate(MediaPlayer mediaPlayer, long[] longs) {
-            Log.d(TAG, "Caching update");
-        }
-
-        @Override
-        public void onCachingSpeed(MediaPlayer mediaPlayer, int speed) {
-            Log.d(TAG, String.format("Caching speed %d", speed));
-        }
-
-        @Override
-        public void onCachingStart(MediaPlayer mediaPlayer) {
-            Log.d(TAG, "Caching start");
-        }
-
-        @Override
-        public void onCachingComplete(MediaPlayer mediaPlayer) {
-            Log.d(TAG, "Caching complete");
-        }
-
-        @Override
-        public void onCachingNotAvailable(MediaPlayer mediaPlayer, int info) {
-            Log.d(TAG, String.format("Caching not available (%d)", info));
-        }
-    };
-
-    private final MediaPlayer.OnSeekCompleteListener mMediaPlayerOnSeekCompleteListener = new MediaPlayer.OnSeekCompleteListener() {
-        @Override
-        public void onSeekComplete(MediaPlayer mediaPlayer) {
-            Log.d(TAG, "Seek complete");
-        }
-    };
-
-    public VitamioTvPlayerView(Context context) {
+    public MediaPlayerView(Context context) {
         super(context);
         initView(context);
     }
 
-    public VitamioTvPlayerView(Context context, AttributeSet attrs) {
+    public MediaPlayerView(Context context, AttributeSet attrs) {
         super(context, attrs);
         initView(context);
     }
 
-    public VitamioTvPlayerView(Context context, AttributeSet attrs, int defStyle) {
+    public MediaPlayerView(Context context, AttributeSet attrs, int defStyle) {
         super(context, attrs, defStyle);
         initView(context);
     }
 
     private void initView(Context context) {
     }
+
+    protected abstract TvMediaPlayer createMediaPlayer(Context context);
 
     private boolean initMediaDetails() {
         if (mMediaDetailsState == MediaDetailsState.UNRESOLVED) {
@@ -294,17 +244,8 @@ public class VitamioTvPlayerView  extends RelativeLayout implements TvPlayer {
     private boolean initMediaPlayer() {
         if (mMediaPlayerState == MediaPlayerState.NONE) {
             Log.d(TAG, "Creating MediaPlayer");
-            mMediaPlayer = new MediaPlayer(getContext(), true);
-            //mMediaPlayer.setBufferSize(...);
-            mMediaPlayer.setOnPreparedListener(mMediaPlayerOnPreparedListener);
-            mMediaPlayer.setOnBufferingUpdateListener(mMediaPlayerOnBufferingUpdateListener);
-            mMediaPlayer.setOnErrorListener(mMediaPlayerOnErrorListener);
-            mMediaPlayer.setOnVideoSizeChangedListener(mMediaPlayerOnVideoSizeChangedListener);
-            mMediaPlayer.setOnInfoListener(mMediaPlayerOnInfoListener);
-            mMediaPlayer.setOnCompletionListener(mMediaPlayerOnCompletionListener);
-            mMediaPlayer.setOnHWRenderFailedListener(mMediaPlayerOnHWRenderFailedListener);
-            mMediaPlayer.setOnCachingUpdateListener(mMediaPlayerOnCachingUpdateListener);
-            mMediaPlayer.setOnSeekCompleteListener(mMediaPlayerOnSeekCompleteListener);
+            mMediaPlayer = createMediaPlayer(getContext());
+            mMediaPlayer.setListener(mMediaPlayerListener);
 
             mMediaPlayerState = MediaPlayerState.IDLE;
         }
@@ -314,10 +255,7 @@ public class VitamioTvPlayerView  extends RelativeLayout implements TvPlayer {
                 && initSurface()) {
             Log.d(TAG, "Initialising MediaPlayer");
             try {
-                // TODO: Check whether we can set the user agent
-                //HashMap<String, String> headers = new HashMap<>();
-                //mMediaPlayer.setDataSource(mMediaDetails.getUri().toString(), headers);
-                mMediaPlayer.setDataSource(mMediaDetails.getUri().toString());
+                mMediaPlayer.setMedia(mMediaDetails);
                 mMediaPlayerState = MediaPlayerState.INITIALISED;
             } catch (IOException e) {
                 onChangeState(TvPlayerState.FAILED, 0);
@@ -328,9 +266,8 @@ public class VitamioTvPlayerView  extends RelativeLayout implements TvPlayer {
         if (mMediaPlayerState == MediaPlayerState.INITIALISED) {
             Log.d(TAG, "Preparing MediaPlayer");
             mMediaPlayerState = MediaPlayerState.PREPARING;
-            mMediaPlayer.setVideoChroma(mMediaPlayerVideoChroma);
-            mMediaPlayer.setScreenOnWhilePlaying(true);
             mMediaPlayer.setDisplay(mSurfaceHolder);
+            mMediaPlayer.setScreenOnWhilePlaying(true);
             mMediaPlayer.prepareAsync();
         }
 
@@ -373,7 +310,7 @@ public class VitamioTvPlayerView  extends RelativeLayout implements TvPlayer {
         switch (mPlayState) {
             case PLAYING:
                 if (initMediaPlayerPresentation()
-                    && mMediaPlayerState != MediaPlayerState.STARTED) {
+                        && mMediaPlayerState != MediaPlayerState.STARTED) {
                     Log.d(TAG, "Starting to play video");
                     onChangeState(TvPlayerState.CONNECTING, 0);
                     mMediaPlayer.start();
@@ -425,7 +362,7 @@ public class VitamioTvPlayerView  extends RelativeLayout implements TvPlayer {
     }
 
     @Override
-    public void setTvPlayerListener(TvPlayerListener listener) {
+    public void setTvPlayerListener(TvPlayerStatusListener listener) {
         mListener = listener;
     }
 

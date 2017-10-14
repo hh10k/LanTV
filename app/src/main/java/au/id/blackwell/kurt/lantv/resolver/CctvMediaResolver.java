@@ -1,4 +1,4 @@
-package au.id.blackwell.kurt.lantv;
+package au.id.blackwell.kurt.lantv.resolver;
 
 import android.annotation.TargetApi;
 import android.graphics.Bitmap;
@@ -22,6 +22,7 @@ import java.io.ByteArrayInputStream;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 
+import au.id.blackwell.kurt.lantv.MediaDetails;
 import au.id.blackwell.kurt.lantv.utility.NumberUtility;
 import au.id.blackwell.kurt.lantv.utility.Pool;
 

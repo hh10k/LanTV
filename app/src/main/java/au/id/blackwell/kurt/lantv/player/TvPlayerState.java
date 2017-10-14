@@ -1,6 +1,6 @@
-package au.id.blackwell.kurt.lantv;
+package au.id.blackwell.kurt.lantv.player;
 
-enum TvPlayerState {
+public enum TvPlayerState {
     NONE,
     RESOLVING,
     CONNECTING,
