@@ -8,10 +8,10 @@ import android.view.LayoutInflater;
 import android.view.SurfaceHolder;
 import android.view.SurfaceView;
 import android.view.View;
+import android.widget.FrameLayout;
 import android.widget.RelativeLayout;
 
 import java.io.IOException;
-import java.util.HashMap;
 
 import io.vov.vitamio.MediaPlayer;
 
@@ -55,6 +55,9 @@ public class VitamioTvPlayerView  extends RelativeLayout implements TvPlayer {
     private TvPlayerListener mListener = null;
     private SurfaceView mSurfaceView = null;
     private SurfaceHolder mSurfaceHolder = null;
+    private int mSurfaceWidth = 0;
+    private int mSurfaceHeight = 0;
+    private int mSurfaceFormat = 0;
     private boolean mSurfaceCreated = false;
     private MediaPlayer mMediaPlayer = null;
     private MediaPlayerState mMediaPlayerState = MediaPlayerState.NONE;
@@ -79,7 +82,7 @@ public class VitamioTvPlayerView  extends RelativeLayout implements TvPlayer {
                 onStateProgress(TvPlayerState.FAILED, 0);
             }
 
-            onPlayPrerequisiteChanged();
+            update();
         }
 
         @Override
@@ -93,23 +96,24 @@ public class VitamioTvPlayerView  extends RelativeLayout implements TvPlayer {
         public void surfaceCreated(SurfaceHolder holder) {
             mSurfaceCreated = true;
             Log.d(TAG, "Surface created");
-            // TODO: Reassign holder to existing media player?
-            onPlayPrerequisiteChanged();
+            update();
         }
 
         @Override
         public void surfaceChanged(SurfaceHolder holder, int format, int width, int height) {
             Log.d(TAG, String.format("Surface resized (%d, %d) format %d", width, height, format));
+            mSurfaceWidth = width;
+            mSurfaceHeight = height;
+            mSurfaceFormat = format;
+            update();
         }
 
         @Override
         public void surfaceDestroyed(SurfaceHolder holder) {
-            Log.d(TAG, "Surface destroyed");
             mSurfaceCreated = false;
-            if (mMediaPlayer != null) {
-                mMediaPlayer.reset();
-                mMediaPlayerState = MediaPlayerState.IDLE;
-            }
+            mSurfaceWidth = 0;
+            mSurfaceHeight = 0;
+            mSurfaceFormat = 0;
         }
     };
 
@@ -118,7 +122,7 @@ public class VitamioTvPlayerView  extends RelativeLayout implements TvPlayer {
         public void onPrepared(MediaPlayer mediaPlayer) {
             Log.d(TAG, "MediaPlayer prepared");
             mMediaPlayerState = MediaPlayerState.PREPARED;
-            onPlayPrerequisiteChanged();
+            update();
         }
     };
 
@@ -150,152 +154,170 @@ public class VitamioTvPlayerView  extends RelativeLayout implements TvPlayer {
                 Log.i(TAG, String.format("Video dimensions changed: (%d x %d)", width, height));
                 mVideoWidth = width;
                 mVideoHeight = height;
-                onPlayPrerequisiteChanged();
+                update();
             }
+        }
+    };
+
+    private final MediaPlayer.OnInfoListener mMediaPlayerOnInfoListener = new MediaPlayer.OnInfoListener() {
+        @Override
+        public boolean onInfo(MediaPlayer mediaPlayer, int what, int extra) {
+            Log.d(TAG, String.format("Media player info %d, %d", what, extra));
+            return false;
+        }
+    };
+
+    private final MediaPlayer.OnCompletionListener mMediaPlayerOnCompletionListener = new MediaPlayer.OnCompletionListener() {
+        @Override
+        public void onCompletion(MediaPlayer mediaPlayer) {
+            mMediaPlayerState = MediaPlayerState.PLAYBACK_COMPLETE;
+            Log.d(TAG, "Playback complete");
+        }
+    };
+
+    private final MediaPlayer.OnHWRenderFailedListener mMediaPlayerOnHWRenderFailedListener = new MediaPlayer.OnHWRenderFailedListener() {
+        @Override
+        public void onFailed() {
+            Log.d(TAG, "Hardware renderer failed");
+        }
+    };
+
+    private final MediaPlayer.OnCachingUpdateListener mMediaPlayerOnCachingUpdateListener = new MediaPlayer.OnCachingUpdateListener() {
+        @Override
+        public void onCachingUpdate(MediaPlayer mediaPlayer, long[] longs) {
+            Log.d(TAG, "Caching update");
+        }
+
+        @Override
+        public void onCachingSpeed(MediaPlayer mediaPlayer, int speed) {
+            Log.d(TAG, String.format("Caching speed %d", speed));
+        }
+
+        @Override
+        public void onCachingStart(MediaPlayer mediaPlayer) {
+            Log.d(TAG, "Caching start");
+        }
+
+        @Override
+        public void onCachingComplete(MediaPlayer mediaPlayer) {
+            Log.d(TAG, "Caching complete");
+        }
+
+        @Override
+        public void onCachingNotAvailable(MediaPlayer mediaPlayer, int info) {
+            Log.d(TAG, String.format("Caching not available (%d)", info));
+        }
+    };
+
+    private final MediaPlayer.OnSeekCompleteListener mMediaPlayerOnSeekCompleteListener = new MediaPlayer.OnSeekCompleteListener() {
+        @Override
+        public void onSeekComplete(MediaPlayer mediaPlayer) {
+            Log.d(TAG, "Seek complete");
         }
     };
 
     public VitamioTvPlayerView(Context context) {
         super(context);
-        init(context);
+        initView(context);
     }
 
     public VitamioTvPlayerView(Context context, AttributeSet attrs) {
         super(context, attrs);
-        init(context);
+        initView(context);
     }
 
     public VitamioTvPlayerView(Context context, AttributeSet attrs, int defStyle) {
         super(context, attrs, defStyle);
-        init(context);
+        initView(context);
     }
 
-    private void init(Context context) {
-        if (isInEditMode()) {
-            return;
-        }
-
-        // Populate this view based on the layout resource
-        LayoutInflater inflater = (LayoutInflater) context.getSystemService(Context.LAYOUT_INFLATER_SERVICE);
-        inflater.inflate(R.layout.view_vitamio_tv_player, this, true);
-
-        mSurfaceView = (SurfaceView) findViewById(R.id.surface);
-        mSurfaceHolder = mSurfaceView.getHolder();
-
-        mSurfaceHolder.setFormat(mSurfacePixelFormat);
-        mSurfaceHolder.addCallback(mSurfaceHolderCallback);
+    private void initView(Context context) {
     }
 
-    private void cancelPlay() {
-        if (mMediaDetailsState == MediaDetailsState.RESOLVING) {
-            Log.d(TAG, "Resolving media cancelled");
-            mMediaDetailsState = MediaDetailsState.UNRESOLVED;
-            mMediaResolver.cancel(mMediaResolverCallback);
-        }
-        if (mMediaPlayer != null) {
-            Log.d(TAG, "Resetting MediaPlayer");
-            mMediaPlayer.reset();
-            mMediaPlayer.release();
-            mMediaPlayer = null;
-            mMediaPlayerState = MediaPlayerState.NONE;
-        }
-    }
-
-    private void onPlayPrerequisiteChanged() {
-        if (mPlayState != PlayState.PLAYING) {
-            if (mPlayState == PlayState.PAUSED) {
-                if (mMediaPlayerState == MediaPlayerState.STARTED) {
-                    mMediaPlayer.pause();
-                }
-            } else {
-                cancelPlay();
-            }
-            return;
-        }
-
-        if (mMediaDetails == null) {
-            // Get media first
-            if (mMediaResolver != null && mMediaDetailsState == MediaDetailsState.UNRESOLVED) {
+    private boolean initMediaDetails() {
+        if (mMediaDetailsState == MediaDetailsState.UNRESOLVED) {
+            if (mMediaResolver != null) {
                 Log.d(TAG, "Resolving media");
                 mMediaDetailsState = MediaDetailsState.RESOLVING;
                 onStateProgress(TvPlayerState.RESOLVING, 0);
                 mMediaResolver.resolve(mMediaResolverCallback);
+            } else {
+                Log.d(TAG, "Can't yet resolve media, nothing to play.");
+                mPlayState = PlayState.STOPPED;
             }
-            return;
+        }
+
+        return mMediaDetails != null;
+    }
+
+    private void deinitMediaDetails() {
+        deinitMediaPlayer();
+
+        if (mMediaDetailsState == MediaDetailsState.RESOLVING) {
+            Log.d(TAG, "Media request cancelled");
+            mMediaResolver.cancel(mMediaResolverCallback);
+        } else if (mMediaDetailsState == MediaDetailsState.RESOLVED) {
+            Log.d(TAG, "Media details forgotten");
+            mMediaDetails = null;
+        }
+        mMediaDetailsState = MediaDetailsState.UNRESOLVED;
+    }
+
+    private boolean initSurface() {
+        if (mSurfaceView == null) {
+            mSurfaceView = new SurfaceView(getContext());
+            mSurfaceHolder = mSurfaceView.getHolder();
+            mSurfaceHolder.addCallback(mSurfaceHolderCallback);
+            mSurfaceHolder.setFormat(mSurfacePixelFormat);
+            addView(mSurfaceView, new FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT));
         }
 
         if (!mSurfaceCreated) {
             // Nothing to draw to yet
             Log.d(TAG, "Waiting for surface to be created");
-            return;
         }
 
+        return mSurfaceCreated;
+    }
+
+    private void deinitSurface() {
+        deinitMediaPlayer();
+
+        if (mSurfaceView != null) {
+            Log.d(TAG, "Surface destroyed");
+            removeView(mSurfaceView);
+            mSurfaceView = null;
+            mSurfaceHolder.removeCallback(mSurfaceHolderCallback);
+            mSurfaceHolder = null;
+        }
+    }
+
+    private boolean initMediaPlayer() {
         if (mMediaPlayerState == MediaPlayerState.NONE) {
             Log.d(TAG, "Creating MediaPlayer");
-            mMediaPlayerState = MediaPlayerState.IDLE;
             mMediaPlayer = new MediaPlayer(getContext(), true);
             //mMediaPlayer.setBufferSize(...);
             mMediaPlayer.setOnPreparedListener(mMediaPlayerOnPreparedListener);
             mMediaPlayer.setOnBufferingUpdateListener(mMediaPlayerOnBufferingUpdateListener);
             mMediaPlayer.setOnErrorListener(mMediaPlayerOnErrorListener);
             mMediaPlayer.setOnVideoSizeChangedListener(mMediaPlayerOnVideoSizeChangedListener);
-            mMediaPlayer.setOnInfoListener(new MediaPlayer.OnInfoListener() {
-                @Override
-                public boolean onInfo(MediaPlayer mediaPlayer, int what, int extra) {
-                    return false;
-                }
-            });
-            mMediaPlayer.setOnCompletionListener(new MediaPlayer.OnCompletionListener() {
-                @Override
-                public void onCompletion(MediaPlayer mediaPlayer) {
+            mMediaPlayer.setOnInfoListener(mMediaPlayerOnInfoListener);
+            mMediaPlayer.setOnCompletionListener(mMediaPlayerOnCompletionListener);
+            mMediaPlayer.setOnHWRenderFailedListener(mMediaPlayerOnHWRenderFailedListener);
+            mMediaPlayer.setOnCachingUpdateListener(mMediaPlayerOnCachingUpdateListener);
+            mMediaPlayer.setOnSeekCompleteListener(mMediaPlayerOnSeekCompleteListener);
 
-                }
-            });
-            mMediaPlayer.setOnHWRenderFailedListener(new MediaPlayer.OnHWRenderFailedListener() {
-                @Override
-                public void onFailed() {
-
-                }
-            });
-            mMediaPlayer.setOnCachingUpdateListener(new MediaPlayer.OnCachingUpdateListener() {
-                @Override
-                public void onCachingUpdate(MediaPlayer mediaPlayer, long[] longs) {
-
-                }
-
-                @Override
-                public void onCachingSpeed(MediaPlayer mediaPlayer, int i) {
-
-                }
-
-                @Override
-                public void onCachingStart(MediaPlayer mediaPlayer) {
-
-                }
-
-                @Override
-                public void onCachingComplete(MediaPlayer mediaPlayer) {
-
-                }
-
-                @Override
-                public void onCachingNotAvailable(MediaPlayer mediaPlayer, int i) {
-
-                }
-            });
-            mMediaPlayer.setOnSeekCompleteListener(new MediaPlayer.OnSeekCompleteListener() {
-                @Override
-                public void onSeekComplete(MediaPlayer mediaPlayer) {
-
-                }
-            });
+            mMediaPlayerState = MediaPlayerState.IDLE;
         }
-        if (mMediaPlayerState == MediaPlayerState.IDLE) {
+
+        if (mMediaPlayerState == MediaPlayerState.IDLE
+                && initMediaDetails()
+                && initSurface()) {
             Log.d(TAG, "Initialising MediaPlayer");
             try {
                 // TODO: Check whether we can set the user agent
-                HashMap<String, String> headers = new HashMap<>();
-                //mMediaPlayer.setDataSource(getContext(), mMediaDetails.getUri(), headers);
+                //HashMap<String, String> headers = new HashMap<>();
+                //mMediaPlayer.setDataSource(mMediaDetails.getUri().toString(), headers);
                 mMediaPlayer.setDataSource(mMediaDetails.getUri().toString());
                 mMediaPlayerState = MediaPlayerState.INITIALISED;
             } catch (IOException e) {
@@ -303,75 +325,104 @@ public class VitamioTvPlayerView  extends RelativeLayout implements TvPlayer {
                 mMediaPlayerState = MediaPlayerState.ERROR;
             }
         }
+
         if (mMediaPlayerState == MediaPlayerState.INITIALISED) {
             Log.d(TAG, "Preparing MediaPlayer");
             mMediaPlayerState = MediaPlayerState.PREPARING;
             mMediaPlayer.setVideoChroma(mMediaPlayerVideoChroma);
-            mMediaPlayer.setDisplay(mSurfaceHolder);
             mMediaPlayer.setScreenOnWhilePlaying(true);
+            mMediaPlayer.setDisplay(mSurfaceHolder);
             mMediaPlayer.prepareAsync();
         }
-        if (mMediaPlayerState != MediaPlayerState.PREPARED) {
-            return;
+
+        return mMediaPlayerState == MediaPlayerState.PREPARED;
+    }
+
+    private void deinitMediaPlayer() {
+        if (mMediaPlayer != null) {
+            Log.d(TAG, "Releasing MediaPlayer");
+            mMediaPlayer.setDisplay(null);
+            mMediaPlayer.release();
+            mMediaPlayer = null;
+            mMediaPlayerState = MediaPlayerState.NONE;
+        }
+    }
+
+    private boolean initMediaPlayerPresentation() {
+        if (!initMediaPlayer()) {
+            return false;
         }
 
-        if (mVideoWidth == 0 && mVideoHeight == 0) {
-            // The video size should be known by now.  If not, we shouldn't start playing.
+        boolean layoutReady = mVideoWidth != 0 && mVideoHeight != 0;
+        boolean surfaceReady = mSurfaceWidth == mVideoWidth
+                && mSurfaceHeight == mVideoHeight
+                && mSurfaceFormat == mSurfacePixelFormat
+                && mMediaPlayerState != MediaPlayerState.STARTED;
+
+        if (!layoutReady) {
             Log.d(TAG, "Waiting for video layout");
-            return;
+        } else if (!surfaceReady) {
+            Log.d(TAG, "Waiting for surface change");
+            mSurfaceHolder.setFixedSize(mVideoWidth, mVideoHeight);
+            mSurfaceHolder.setFormat(mSurfacePixelFormat);
         }
 
-        mSurfaceHolder.setFixedSize(mVideoWidth, mVideoHeight);
+        return layoutReady && surfaceReady;
+    }
 
-        if (mMediaPlayerState != MediaPlayerState.STARTED) {
-            Log.d(TAG, "Starting to play video");
-            onStateProgress(TvPlayerState.CONNECTING, 0);
-            mMediaPlayer.start();
-            mMediaPlayerState = MediaPlayerState.STARTED;
+    private void update() {
+        switch (mPlayState) {
+            case PLAYING:
+                if (initMediaPlayerPresentation()
+                    && mMediaPlayerState != MediaPlayerState.STARTED) {
+                    Log.d(TAG, "Starting to play video");
+                    onStateProgress(TvPlayerState.CONNECTING, 0);
+                    mMediaPlayer.start();
+                    mMediaPlayerState = MediaPlayerState.STARTED;
+                }
+                break;
+            case PAUSED:
+                if (mMediaPlayerState == MediaPlayerState.STARTED) {
+                    Log.d(TAG, "Pausing video");
+                    mMediaPlayerState = MediaPlayerState.PAUSED;
+                    mMediaPlayer.pause();
+                } else if (mMediaDetailsState == MediaDetailsState.RESOLVING) {
+                    deinitMediaDetails();
+                }
+                break;
+            case STOPPED:
+                deinitSurface();
+                deinitMediaDetails();
+                mMediaResolver = null;
+                mMediaDetails = null;
+                break;
         }
     }
 
     @Override
     public void play(MediaResolver mediaResolver) {
         stop();
-
-        mPlayState = PlayState.PLAYING;
         mMediaResolver = mediaResolver;
-        onPlayPrerequisiteChanged();
+        mPlayState = PlayState.PLAYING;
+        update();
     }
 
     @Override
     public void resume() {
-        if (mPlayState != PlayState.PAUSED) {
-            return;
-        }
         mPlayState = PlayState.PLAYING;
-
-        if (mMediaPlayerState == MediaPlayerState.PAUSED) {
-            mMediaPlayerState = MediaPlayerState.STARTED;
-            mMediaPlayer.start();
-        } else {
-            onPlayPrerequisiteChanged();
-        }
+        update();
     }
 
     @Override
     public void pause() {
-        if (mPlayState == PlayState.STOPPED) {
-            // Can't pause while stopped.
-            return;
-        }
-
         mPlayState = PlayState.PAUSED;
-        onPlayPrerequisiteChanged();
+        update();
     }
 
     @Override
     public void stop() {
         mPlayState = PlayState.STOPPED;
-        onPlayPrerequisiteChanged();
-        mMediaResolver = null;
-        mMediaDetailsState = MediaDetailsState.UNRESOLVED;
+        update();
     }
 
     @Override
