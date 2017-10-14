@@ -13,7 +13,7 @@ import io.vov.vitamio.MediaPlayer;
 class VitamioMediaPlayerView extends MediaPlayerView {
     private static final String TAG = "VitamioTvPlayerView";
 
-    private static final int mMediaPlayerVideoChroma = (mSurfacePixelFormat == PixelFormat.RGB_565) ? MediaPlayer.VIDEOCHROMA_RGB565 : MediaPlayer.VIDEOCHROMA_RGBA;
+    private static final int mMediaPlayerVideoChroma = (mTargetSurfaceFormat == PixelFormat.RGB_565) ? MediaPlayer.VIDEOCHROMA_RGB565 : MediaPlayer.VIDEOCHROMA_RGBA;
 
     private final MediaPlayer.OnHWRenderFailedListener mMediaPlayerOnHWRenderFailedListener = new MediaPlayer.OnHWRenderFailedListener() {
         @Override
@@ -132,7 +132,12 @@ class VitamioMediaPlayerView extends MediaPlayerView {
         @Override
         public void onVideoSizeChanged(MediaPlayer mp, int width, int height) {
             if (mListener != null) {
-                mListener.onVideoSizeChanged(width, height);
+                float aspectRatio = getVideoAspectRatio();
+                if (aspectRatio < 0.0001) {
+                    aspectRatio = (float)width / (float)height;
+                }
+
+                mListener.onVideoSizeChanged(width, height, aspectRatio);
             }
         }
     }

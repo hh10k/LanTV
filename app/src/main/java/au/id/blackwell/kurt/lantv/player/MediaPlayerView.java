@@ -4,11 +4,11 @@ import android.content.Context;
 import android.graphics.PixelFormat;
 import android.util.AttributeSet;
 import android.util.Log;
+import android.view.Gravity;
 import android.view.SurfaceHolder;
 import android.view.SurfaceView;
 import android.view.View;
 import android.widget.FrameLayout;
-import android.widget.RelativeLayout;
 
 import java.io.IOException;
 
@@ -16,7 +16,7 @@ import au.id.blackwell.kurt.lantv.MediaDetails;
 import au.id.blackwell.kurt.lantv.resolver.MediaResolver;
 import au.id.blackwell.kurt.lantv.R;
 
-public abstract class MediaPlayerView extends RelativeLayout implements TvPlayer {
+public abstract class MediaPlayerView extends FrameLayout implements TvPlayer {
 
     private static final String TAG = "TvMediaPlayerView";
 
@@ -46,8 +46,8 @@ public abstract class MediaPlayerView extends RelativeLayout implements TvPlayer
 
     // RGBA video does not seem to be supported on the MoonBox and results in a sort of corrupted appearance.
     // TODO: Investigate whether this is because of a format mismatch, or whether we can detect the format of the device.
-    protected static final int mSurfacePixelFormat = PixelFormat.RGB_565;
-    //protected static final int mSurfacePixelFormat = PixelFormat.RGBA_8888;
+    protected static final int mTargetSurfaceFormat = PixelFormat.RGB_565;
+    //protected static final int mTargetSurfaceFormat = PixelFormat.RGBA_8888;
 
 
     private TvPlayerStatusListener mListener = null;
@@ -56,6 +56,8 @@ public abstract class MediaPlayerView extends RelativeLayout implements TvPlayer
     private int mSurfaceWidth = 0;
     private int mSurfaceHeight = 0;
     private int mSurfaceFormat = 0;
+    private int mLayoutWidth = 0;
+    private int mLayoutHeight = 0;
     private boolean mSurfaceCreated = false;
     private TvMediaPlayer mMediaPlayer = null;
     private MediaPlayerState mMediaPlayerState = MediaPlayerState.NONE;
@@ -65,6 +67,7 @@ public abstract class MediaPlayerView extends RelativeLayout implements TvPlayer
     private PlayState mPlayState = PlayState.STOPPED;
     private int mVideoWidth = 0;
     private int mVideoHeight = 0;
+    private float mVideoAspectRatio = 0;
 
     private final MediaResolver.Callback mMediaResolverCallback = new MediaResolver.Callback() {
         @Override
@@ -141,11 +144,12 @@ public abstract class MediaPlayerView extends RelativeLayout implements TvPlayer
         }
 
         @Override
-        public void onVideoSizeChanged(int width, int height) {
-            if (mVideoWidth != width || mVideoHeight != height) {
+        public void onVideoSizeChanged(int width, int height, float aspectRatio) {
+            if (mVideoWidth != width || mVideoHeight != height || mVideoAspectRatio != aspectRatio) {
                 Log.i(TAG, String.format("Video dimensions changed: (%d x %d)", width, height));
                 mVideoWidth = width;
                 mVideoHeight = height;
+                mVideoAspectRatio = aspectRatio;
                 update();
             }
         }
@@ -217,8 +221,10 @@ public abstract class MediaPlayerView extends RelativeLayout implements TvPlayer
             mSurfaceView = new SurfaceView(getContext());
             mSurfaceHolder = mSurfaceView.getHolder();
             mSurfaceHolder.addCallback(mSurfaceHolderCallback);
-            mSurfaceHolder.setFormat(mSurfacePixelFormat);
-            addView(mSurfaceView, new FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT));
+            mSurfaceHolder.setFormat(mTargetSurfaceFormat);
+            LayoutParams params = new LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT);
+            params.gravity = Gravity.CENTER;
+            addView(mSurfaceView, params);
         }
 
         if (!mSurfaceCreated) {
@@ -289,28 +295,52 @@ public abstract class MediaPlayerView extends RelativeLayout implements TvPlayer
             return false;
         }
 
-        boolean layoutReady = mVideoWidth != 0 && mVideoHeight != 0;
-        boolean surfaceReady = mSurfaceWidth == mVideoWidth
-                && mSurfaceHeight == mVideoHeight
-                && mSurfaceFormat == mSurfacePixelFormat
-                && mMediaPlayerState != MediaPlayerState.STARTED;
+        boolean videoSizeKnown = mVideoWidth != 0 && mVideoHeight != 0;
+        boolean surfaceReady = false;
 
-        if (!layoutReady) {
-            Log.d(TAG, "Waiting for video layout");
-        } else if (!surfaceReady) {
-            Log.d(TAG, "Waiting for surface change");
-            mSurfaceHolder.setFixedSize(mVideoWidth, mVideoHeight);
-            mSurfaceHolder.setFormat(mSurfacePixelFormat);
+        if (!videoSizeKnown) {
+            Log.d(TAG, "Waiting for video size");
+        } else {
+
+            int viewWidth = getWidth();
+            int viewHeight = getHeight();
+            int fitWidth = viewWidth;
+            int fitHeight = (int)(fitWidth / mVideoAspectRatio);
+            if (fitHeight > viewHeight) {
+                fitHeight = viewHeight;
+                fitWidth = (int)(fitHeight * mVideoAspectRatio);
+            }
+
+            if (fitWidth != mLayoutWidth
+                    || fitHeight != mLayoutHeight) {
+                Log.d(TAG, String.format("Layout change from %dx%d to %dx%d", mLayoutWidth, mLayoutHeight, fitWidth, fitHeight));
+                mLayoutWidth = fitWidth;
+                mLayoutHeight = fitHeight;
+
+                LayoutParams lp = (LayoutParams)mSurfaceView.getLayoutParams();
+                lp.width = mLayoutWidth;
+                lp.height = mLayoutHeight;
+                mSurfaceView.setLayoutParams(lp);
+                mSurfaceHolder.setFixedSize(mLayoutWidth, mLayoutHeight);
+            }
+
+            surfaceReady = mSurfaceFormat == mTargetSurfaceFormat
+                    && mSurfaceWidth == mLayoutWidth
+                    && mSurfaceHeight == mLayoutHeight;
+
+            if (!surfaceReady) {
+                Log.d(TAG, "Waiting for surface change");
+            }
         }
 
-        return layoutReady && surfaceReady;
+        return videoSizeKnown && surfaceReady;
     }
 
     private void update() {
         switch (mPlayState) {
             case PLAYING:
                 if (initMediaPlayerPresentation()
-                        && mMediaPlayerState != MediaPlayerState.STARTED) {
+                    && mMediaPlayerState != MediaPlayerState.STARTED) {
                     Log.d(TAG, "Starting to play video");
                     onChangeState(TvPlayerState.CONNECTING, 0);
                     mMediaPlayer.start();

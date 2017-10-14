@@ -152,7 +152,7 @@ public final class MainActivity extends AppCompatActivity {
             mPlayerType = TV_CHANNELS[channelIndex].getPlayerType();
             mPlayer = mPlayerFactory.create(mPlayerType, this);
             mPlayer.setTvPlayerListener(mPlayerStatus);
-            mPlayerFrame.addView(mPlayer.getView());
+            mPlayerFrame.addView(mPlayer.getView(), new ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
         }
 
         MediaResolver resolver = mMediaResolverFactory.create(channel.getMediaResolveUri());

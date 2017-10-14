@@ -80,7 +80,8 @@ class AndroidMediaPlayerView extends MediaPlayerView {
         @Override
         public void onVideoSizeChanged(MediaPlayer mp, int width, int height) {
             if (mListener != null) {
-                mListener.onVideoSizeChanged(width, height);
+                // Assumes pixel size is always square
+                mListener.onVideoSizeChanged(width, height, (float)width / (float)height);
             }
         }
     }
