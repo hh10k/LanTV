@@ -4,7 +4,6 @@ import android.content.Context;
 import android.graphics.PixelFormat;
 import android.util.AttributeSet;
 import android.util.Log;
-import android.view.LayoutInflater;
 import android.view.SurfaceHolder;
 import android.view.SurfaceView;
 import android.view.View;
@@ -76,10 +75,10 @@ public class VitamioTvPlayerView  extends RelativeLayout implements TvPlayer {
 
             if (mMediaDetails != null) {
                 Log.d(TAG, "Got media details");
-                onStateProgress(TvPlayerState.RESOLVING, 1);
+                onChangeState(TvPlayerState.RESOLVING, 1);
             } else {
                 Log.d(TAG, "Failed to get media details");
-                onStateProgress(TvPlayerState.FAILED, 0);
+                onFailureState(getContext().getString(R.string.error_vitamio_no_media));
             }
 
             update();
@@ -87,7 +86,7 @@ public class VitamioTvPlayerView  extends RelativeLayout implements TvPlayer {
 
         @Override
         public void onMediaResolverProgress(float progress) {
-            onStateProgress(TvPlayerState.RESOLVING, progress);
+            onChangeState(TvPlayerState.RESOLVING, progress);
         }
     };
 
@@ -130,9 +129,9 @@ public class VitamioTvPlayerView  extends RelativeLayout implements TvPlayer {
         @Override
         public void onBufferingUpdate(MediaPlayer mediaPlayer, int progress) {
             if (mediaPlayer.isPlaying()) {
-                onStateProgress(TvPlayerState.PLAYING, 0);
+                onChangeState(TvPlayerState.PLAYING, 0);
             } else {
-                onStateProgress(TvPlayerState.BUFFERING, (float)progress / 100);
+                onChangeState(TvPlayerState.BUFFERING, (float)progress / 100);
             }
         }
     };
@@ -142,7 +141,7 @@ public class VitamioTvPlayerView  extends RelativeLayout implements TvPlayer {
         public boolean onError(MediaPlayer mediaPlayer, int what, int extra) {
             Log.i(TAG, String.format("Error during playback: what=%d, extra=%d", what, extra));
             mMediaPlayerState = MediaPlayerState.ERROR;
-            onStateProgress(TvPlayerState.FAILED, 0);
+            onFailureState(getContext().getString(R.string.error_vitamio_playback));
             return false;
         }
     };
@@ -239,7 +238,7 @@ public class VitamioTvPlayerView  extends RelativeLayout implements TvPlayer {
             if (mMediaResolver != null) {
                 Log.d(TAG, "Resolving media");
                 mMediaDetailsState = MediaDetailsState.RESOLVING;
-                onStateProgress(TvPlayerState.RESOLVING, 0);
+                onChangeState(TvPlayerState.RESOLVING, 0);
                 mMediaResolver.resolve(mMediaResolverCallback);
             } else {
                 Log.d(TAG, "Can't yet resolve media, nothing to play.");
@@ -321,7 +320,7 @@ public class VitamioTvPlayerView  extends RelativeLayout implements TvPlayer {
                 mMediaPlayer.setDataSource(mMediaDetails.getUri().toString());
                 mMediaPlayerState = MediaPlayerState.INITIALISED;
             } catch (IOException e) {
-                onStateProgress(TvPlayerState.FAILED, 0);
+                onChangeState(TvPlayerState.FAILED, 0);
                 mMediaPlayerState = MediaPlayerState.ERROR;
             }
         }
@@ -376,7 +375,7 @@ public class VitamioTvPlayerView  extends RelativeLayout implements TvPlayer {
                 if (initMediaPlayerPresentation()
                     && mMediaPlayerState != MediaPlayerState.STARTED) {
                     Log.d(TAG, "Starting to play video");
-                    onStateProgress(TvPlayerState.CONNECTING, 0);
+                    onChangeState(TvPlayerState.CONNECTING, 0);
                     mMediaPlayer.start();
                     mMediaPlayerState = MediaPlayerState.STARTED;
                 }
@@ -430,11 +429,18 @@ public class VitamioTvPlayerView  extends RelativeLayout implements TvPlayer {
         mListener = listener;
     }
 
-    private void onStateProgress(TvPlayerState state, float progress) {
+    private void onChangeState(TvPlayerState state, float progress) {
         if (mListener == null) {
             return;
         }
         mListener.onTvPlayerStateChanged(state, progress);
+    }
+
+    private void onFailureState(String reason) {
+        if (mListener == null) {
+            return;
+        }
+        mListener.onTvPlayerFailed(reason);
     }
 
     public View getView() {

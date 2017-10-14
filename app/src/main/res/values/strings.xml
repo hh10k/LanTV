@@ -6,4 +6,7 @@
     <string name="status_playing">Playing</string>
     <string name="status_paused">Paused</string>
     <string name="status_failed">Failed</string>
+    <string name="status_failed_reason">Failed - %s</string>
+    <string name="error_vitamio_no_media">Could not get video URL</string>
+    <string name="error_vitamio_playback">Error during playback</string>
 </resources>
