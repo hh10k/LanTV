@@ -3,12 +3,15 @@ package au.id.blackwell.kurt.lantv.player;
 import android.content.Context;
 import android.media.MediaPlayer;
 import android.util.AttributeSet;
+import android.util.Log;
 
 import java.io.IOException;
 
 import au.id.blackwell.kurt.lantv.MediaDetails;
 
-class AndroidMediaPlayerView extends MediaPlayerView {
+final class AndroidMediaPlayerView extends MediaPlayerView {
+    private static final String TAG = "AndroidMediaPlayerView";
+
     class AndroidMediaPlayer extends MediaPlayer implements
             TvMediaPlayer,
             MediaPlayer.OnPreparedListener,
@@ -56,10 +59,18 @@ class AndroidMediaPlayerView extends MediaPlayerView {
 
         @Override
         public boolean onInfo(MediaPlayer mp, int what, int extra) {
+            Log.d(TAG, String.format("info %d, %d", what, extra));
+
+            boolean handled = false;
             if (mListener != null) {
-                return mListener.onInfo(what, extra);
+                switch (what) {
+                    case MEDIA_INFO_VIDEO_RENDERING_START:
+                        mListener.onPlaying();
+                        handled = true;
+                        break;
+                }
             }
-            return false;
+            return handled;
         }
 
         @Override

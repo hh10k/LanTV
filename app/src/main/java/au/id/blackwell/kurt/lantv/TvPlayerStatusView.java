@@ -101,8 +101,8 @@ public class TvPlayerStatusView extends ConstraintLayout implements TvPlayerStat
                 mText.setText(getContext().getString(R.string.status_playing));
                 setVisible(false);
                 break;
-            case PAUSED:
-                mText.setText(getContext().getString(R.string.status_paused));
+            case STOPPED:
+                mText.setText(getContext().getString(R.string.status_stopped));
                 setVisible(true);
                 break;
             case FAILED:

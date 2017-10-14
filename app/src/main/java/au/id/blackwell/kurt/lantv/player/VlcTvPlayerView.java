@@ -120,11 +120,11 @@ final class VlcTvPlayerView extends RelativeLayout implements TvPlayer {
                     break;
                 case MediaPlayer.Event.Paused:
                     Log.d(TAG, "MediaPlayer.Event.Paused");
-                    notifyState(TvPlayerState.PAUSED, 0);
+                    notifyState(TvPlayerState.STOPPED, 0);
                     break;
                 case MediaPlayer.Event.Stopped:
                     Log.d(TAG, "MediaPlayer.Event.Stopped");
-                    notifyState(TvPlayerState.PAUSED, 0);
+                    notifyState(TvPlayerState.STOPPED, 0);
                     break;
                 case MediaPlayer.Event.EncounteredError:
                     Log.d(TAG, "MediaPlayer.Event.EncounteredError");
@@ -269,7 +269,7 @@ final class VlcTvPlayerView extends RelativeLayout implements TvPlayer {
             } else {
                 Log.i(TAG, "Stopping streaming video");
                 stop();
-                notifyState(TvPlayerState.PAUSED, 0);
+                notifyState(TvPlayerState.STOPPED, 0);
             }
         } else if (mMediaDetails != null) {
             // We may resume later, but we definitely don't care about the result now.

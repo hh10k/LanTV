@@ -9,7 +9,7 @@ interface TvMediaPlayerListener {
 
     void onVideoSizeChanged(int width, int height, float aspectRatio);
 
-    boolean onInfo(int what, int extra);
+    void onPlaying();
 
     void onCompletion();
 }

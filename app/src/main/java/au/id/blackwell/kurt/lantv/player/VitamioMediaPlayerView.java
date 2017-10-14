@@ -79,7 +79,6 @@ class VitamioMediaPlayerView extends MediaPlayerView {
             setOnCachingUpdateListener(mMediaPlayerOnCachingUpdateListener);
             setOnSeekCompleteListener(mMediaPlayerOnSeekCompleteListener);
 
-            setVideoChroma(mMediaPlayerVideoChroma);
         }
 
         @Override
@@ -90,6 +89,7 @@ class VitamioMediaPlayerView extends MediaPlayerView {
         @Override
         public void setMedia(MediaDetails details) throws IOException {
             setDataSource(details.getUri().toString());
+            setVideoChroma(mMediaPlayerVideoChroma);
         }
 
         @Override
@@ -108,10 +108,20 @@ class VitamioMediaPlayerView extends MediaPlayerView {
 
         @Override
         public boolean onInfo(MediaPlayer mp, int what, int extra) {
+            Log.d(TAG, String.format("info %d, %d", what, extra));
+
+            boolean handled = false;
             if (mListener != null) {
-                return mListener.onInfo(what, extra);
+                switch (what) {
+                    case MEDIA_INFO_BUFFERING_END:
+                        if (isPlaying()) {
+                            mListener.onPlaying();
+                        }
+                        handled = true;
+                        break;
+                }
             }
-            return false;
+            return handled;
         }
 
         @Override

@@ -2,6 +2,9 @@ package au.id.blackwell.kurt.lantv.player;
 
 import android.content.Context;
 import android.graphics.PixelFormat;
+import android.graphics.drawable.ColorDrawable;
+import android.media.MediaPlayer;
+import android.support.v4.content.ContextCompat;
 import android.util.AttributeSet;
 import android.util.Log;
 import android.view.Gravity;
@@ -155,14 +158,14 @@ public abstract class MediaPlayerView extends FrameLayout implements TvPlayer {
         }
 
         @Override
-        public boolean onInfo(int what, int extra) {
-            Log.d(TAG, String.format("Media player info %d, %d", what, extra));
-            return false;
+        public void onPlaying() {
+            onChangeState(TvPlayerState.PLAYING, 0);
         }
 
         @Override
         public void onCompletion() {
             mMediaPlayerState = MediaPlayerState.PLAYBACK_COMPLETE;
+            onChangeState(TvPlayerState.STOPPED, 0);
             Log.d(TAG, "Playback complete");
         }
     };
@@ -183,6 +186,7 @@ public abstract class MediaPlayerView extends FrameLayout implements TvPlayer {
     }
 
     private void initView(Context context) {
+        setBackgroundColor(ContextCompat.getColor(getContext(), android.R.color.black));
     }
 
     protected abstract TvMediaPlayer createMediaPlayer(Context context);
@@ -290,7 +294,7 @@ public abstract class MediaPlayerView extends FrameLayout implements TvPlayer {
         }
     }
 
-    private boolean initMediaPlayerPresentation() {
+    private boolean initLayout() {
         if (!initMediaPlayer()) {
             return false;
         }
@@ -339,7 +343,7 @@ public abstract class MediaPlayerView extends FrameLayout implements TvPlayer {
     private void update() {
         switch (mPlayState) {
             case PLAYING:
-                if (initMediaPlayerPresentation()
+                if (initLayout()
                     && mMediaPlayerState != MediaPlayerState.STARTED) {
                     Log.d(TAG, "Starting to play video");
                     onChangeState(TvPlayerState.CONNECTING, 0);

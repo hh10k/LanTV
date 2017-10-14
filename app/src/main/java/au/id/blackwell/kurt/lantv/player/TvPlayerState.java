@@ -6,6 +6,6 @@ public enum TvPlayerState {
     CONNECTING,
     BUFFERING,
     PLAYING,
-    PAUSED,
+    STOPPED,
     FAILED,
 }
