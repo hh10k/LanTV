@@ -2,8 +2,6 @@ package au.id.blackwell.kurt.lantv.player;
 
 import android.content.Context;
 import android.graphics.PixelFormat;
-import android.graphics.drawable.ColorDrawable;
-import android.media.MediaPlayer;
 import android.support.v4.content.ContextCompat;
 import android.util.AttributeSet;
 import android.util.Log;
