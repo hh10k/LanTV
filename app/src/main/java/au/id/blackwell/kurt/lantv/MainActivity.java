@@ -71,13 +71,7 @@ public final class MainActivity extends AppCompatActivity {
         cookieManager.setCookie("http://tv.cctv.com/", "country_code=CN; path=/live");
 
         // Change to the initial TV channel
-        int channelIndex = 0;
-        for (int i = 0; i < TV_CHANNELS.length; ++i) {
-            if (TV_CHANNELS[i].getId().equals(DEFAULT_TV_CHANNEL_ID)) {
-                channelIndex = i;
-                break;
-            }
-        }
+        int channelIndex = getTvChannelIndexById(DEFAULT_TV_CHANNEL_ID);
         setTvChannel(channelIndex);
     }
 
@@ -130,6 +124,17 @@ public final class MainActivity extends AppCompatActivity {
                 && channelIndex != mChannelIndex);
 
         setTvChannel(channelIndex);
+    }
+
+    private static int getTvChannelIndexById(String id) {
+        int channelIndex = 0;
+        for (int i = 0; i < TV_CHANNELS.length; ++i) {
+            if (TV_CHANNELS[i].getId().equals(DEFAULT_TV_CHANNEL_ID)) {
+                channelIndex = i;
+                break;
+            }
+        }
+        return channelIndex;
     }
 
     private void setTvChannel(int channelIndex) {

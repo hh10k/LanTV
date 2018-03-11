@@ -81,7 +81,7 @@ public abstract class MediaPlayerView extends FrameLayout implements TvPlayer {
                 onChangeState(TvPlayerState.RESOLVING, 1);
             } else {
                 Log.d(TAG, "Failed to get media details");
-                onFailureState(getContext().getString(R.string.error_vitamio_no_media));
+                onFailureState(getContext().getString(R.string.status_failed_connection));
             }
 
             update();
@@ -140,7 +140,7 @@ public abstract class MediaPlayerView extends FrameLayout implements TvPlayer {
         public boolean onError(int what, int extra) {
             Log.i(TAG, String.format("Error during playback: what=%d, extra=%d", what, extra));
             mMediaPlayerState = MediaPlayerState.ERROR;
-            onFailureState(getContext().getString(R.string.error_vitamio_playback));
+            onFailureState(getContext().getString(R.string.status_failed_playback));
             return false;
         }
 
@@ -344,9 +344,15 @@ public abstract class MediaPlayerView extends FrameLayout implements TvPlayer {
                 if (initLayout()
                     && mMediaPlayerState != MediaPlayerState.STARTED) {
                     Log.d(TAG, "Starting to play video");
-                    onChangeState(TvPlayerState.CONNECTING, 0);
-                    mMediaPlayer.start();
                     mMediaPlayerState = MediaPlayerState.STARTED;
+                    onChangeState(TvPlayerState.CONNECTING, 0);
+                    try {
+                        mMediaPlayer.start();
+                    } catch (Throwable error) {
+                        Log.e(TAG, "Error when attempting to start media player", error);
+                        mMediaPlayerState = MediaPlayerState.ERROR;
+                        throw error;
+                    }
                 }
                 break;
             case PAUSED:
