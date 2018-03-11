@@ -14,7 +14,6 @@ import au.id.blackwell.kurt.lantv.player.TvPlayerFactory;
 import au.id.blackwell.kurt.lantv.resolver.MediaResolver;
 import au.id.blackwell.kurt.lantv.resolver.MediaResolverFactory;
 import au.id.blackwell.kurt.lantv.utility.LimitedPool;
-import io.vov.vitamio.LibsChecker;
 
 public final class MainActivity extends AppCompatActivity {
     private static final String TAG = "MainActivity";
@@ -54,9 +53,6 @@ public final class MainActivity extends AppCompatActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-
-        if (!LibsChecker.checkVitamioLibs(this))
-            return;
 
         setContentView(R.layout.activity_main);
         setVolumeControlStream(AudioManager.STREAM_MUSIC);
