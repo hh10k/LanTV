@@ -374,15 +374,13 @@ public abstract class MediaPlayerView extends FrameLayout implements TvPlayer {
     }
 
     @Override
-    public void play(MediaResolver mediaResolver) {
+    public void reset(MediaResolver mediaResolver) {
         stop();
         mMediaResolver = mediaResolver;
-        mPlayState = PlayState.PLAYING;
-        update();
     }
 
     @Override
-    public void resume() {
+    public void play() {
         mPlayState = PlayState.PLAYING;
         update();
     }

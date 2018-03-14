@@ -25,7 +25,7 @@ public final class MainActivity extends AppCompatActivity {
     private TvPlayerStatusView mPlayerStatus;
     private final LimitedPool<WebView> mWebViewPool = new LimitedPool<>();
     private final MediaResolverFactory mMediaResolverFactory = new MediaResolverFactory(mWebViewPool);
-    private int mChannelIndex = -1;
+    private int mChannelIndex = getTvChannelIndexById(DEFAULT_TV_CHANNEL_ID);
 
     private static final String DEFAULT_TV_CHANNEL_ID = "cctv13";
     private static final String DEFAULT_PLAYER = TvPlayerFactory.IJK;
@@ -65,10 +65,12 @@ public final class MainActivity extends AppCompatActivity {
         // I'm not sure if the quality is actually any better.
         CookieManager cookieManager = CookieManager.getInstance();
         cookieManager.setCookie("http://tv.cctv.com/", "country_code=CN; path=/live");
+    }
 
-        // Change to the initial TV channel
-        int channelIndex = getTvChannelIndexById(DEFAULT_TV_CHANNEL_ID);
-        setTvChannel(channelIndex);
+    @Override
+    protected void onStart() {
+        super.onStart();
+        setTvChannel(mChannelIndex);
     }
 
     @Override
@@ -83,13 +85,19 @@ public final class MainActivity extends AppCompatActivity {
                 | View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION
                 | View.SYSTEM_UI_FLAG_HIDE_NAVIGATION);
 
-        mPlayer.resume();
+        mPlayer.play();
     }
 
     @Override
     protected void onPause() {
         super.onPause();
         mPlayer.pause();
+    }
+
+    @Override
+    protected void onStop() {
+        super.onStop();
+        destroyPlayer();
     }
 
     @Override
@@ -120,6 +128,7 @@ public final class MainActivity extends AppCompatActivity {
                 && channelIndex != mChannelIndex);
 
         setTvChannel(channelIndex);
+        mPlayer.play();
     }
 
     private static int getTvChannelIndexById(String id) {
@@ -134,15 +143,36 @@ public final class MainActivity extends AppCompatActivity {
     }
 
     private void setTvChannel(int channelIndex) {
-        if (channelIndex == mChannelIndex) {
-            return;
-        }
-
-        mChannelIndex = channelIndex;
         TvChannel channel = TV_CHANNELS[channelIndex];
 
-        if (mPlayerType != null && !mPlayerType.equals(channel.getPlayerType())) {
-            // Throw away old player
+        // Restart playback if we had to recreate the player or the channel has changed
+        if (createPlayer(channel.getPlayerType())
+                || channelIndex != mChannelIndex) {
+            mChannelIndex = channelIndex;
+            MediaResolver resolver = mMediaResolverFactory.create(channel.getMediaResolveUri());
+            mPlayerStatus.setTitle(channel.getTitle());
+            mPlayer.reset(resolver);
+        }
+    }
+
+    private boolean createPlayer(String playerType) {
+        if (!playerType.equals(mPlayerType)) {
+            destroyPlayer();
+        }
+        if (mPlayerType == null) {
+            mPlayerType = playerType;
+            mPlayer = mPlayerFactory.create(mPlayerType, this);
+            mPlayer.setTvPlayerListener(mPlayerStatus);
+            mPlayerFrame.addView(mPlayer.getView(), new ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
+
+            return true;
+        }
+
+        return false;
+    }
+
+    private void destroyPlayer() {
+        if (mPlayerType != null) {
             mPlayer.stop();
             mPlayer.setTvPlayerListener(null);
             mPlayerFrame.removeView(mPlayer.getView());
@@ -150,16 +180,5 @@ public final class MainActivity extends AppCompatActivity {
             mPlayer = null;
             mPlayerType = null;
         }
-        if (mPlayerType == null) {
-            // Install new player
-            mPlayerType = TV_CHANNELS[channelIndex].getPlayerType();
-            mPlayer = mPlayerFactory.create(mPlayerType, this);
-            mPlayer.setTvPlayerListener(mPlayerStatus);
-            mPlayerFrame.addView(mPlayer.getView(), new ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
-        }
-
-        MediaResolver resolver = mMediaResolverFactory.create(channel.getMediaResolveUri());
-        mPlayerStatus.setTitle(channel.getTitle());
-        mPlayer.play(resolver);
     }
 }

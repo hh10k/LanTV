@@ -6,14 +6,15 @@ import au.id.blackwell.kurt.lantv.resolver.MediaResolver;
 
 public interface TvPlayer {
     /**
-     * Start playing the given video.
+     * Reset player, and ready new media to load
+     * @param mediaResolver
      */
-    void play(MediaResolver mediaResolver);
+    void reset(MediaResolver mediaResolver);
 
     /**
      * Resume playing the video
      */
-    void resume();
+    void play();
 
     /**
      * Pause video, if playing
