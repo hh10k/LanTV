@@ -1,11 +1,11 @@
-package au.id.blackwell.kurt.lantv.player;
+package au.id.blackwell.kurt.lantv.player
 
-public enum TvPlayerState {
+enum class TvPlayerState {
     NONE,
     RESOLVING,
     CONNECTING,
     BUFFERING,
     PLAYING,
     STOPPED,
-    FAILED,
+    FAILED
 }
