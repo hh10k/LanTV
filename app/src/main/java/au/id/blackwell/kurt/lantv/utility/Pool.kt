@@ -1,14 +1,11 @@
 package au.id.blackwell.kurt.lantv.utility
 
-typealias PoolCallback<T> = (Pool.Item<T>) -> Unit
+import io.reactivex.Observable
 
 interface Pool<T> {
-    interface Item<T> {
-        fun get(): T
-        fun release()
-    }
+    fun request(): Observable<T>
 
-    fun request(callback: PoolCallback<T>)
+    fun addItem(item: T)
 
-    fun cancel(callback: PoolCallback<T>)
+    fun removeItem(item: T)
 }

@@ -23,6 +23,8 @@ import java.util.ArrayList
 import au.id.blackwell.kurt.lantv.player.MediaDetails
 import au.id.blackwell.kurt.lantv.utility.NumberUtility
 import au.id.blackwell.kurt.lantv.utility.Pool
+import io.reactivex.Observable
+import io.reactivex.disposables.Disposable
 
 internal class CctvMediaResolver(
         private val mWebViewPool: Pool<WebView>,
@@ -40,18 +42,14 @@ internal class CctvMediaResolver(
         private val FIND_VIDEO_INTERVAL: Long = 500
     }
 
-    private var mWebView: Pool.Item<WebView>? = null
+    private var mWebView: WebView? = null
+    private var mWebViewRequest: Disposable? = null
     private var mCallbacks = ArrayList<MediaResolver.Callback>()
     private var mResolveState = ResolveState.IDLE
     private var mPageState = PageState.NONE
     private var mPageStateTimestamp: Long = 0
     private var mPageLoadCount = 0
     private val mHandler = Handler()
-
-    private val mWebViewPoolCallback = { item: Pool.Item<WebView> ->
-        mWebView = item
-        enterStartState()
-    }
 
     private val mWebViewClient = object : WebViewClient() {
         private var mCurrentUrl: String? = null
@@ -190,15 +188,16 @@ internal class CctvMediaResolver(
         Log.i(TAG, "Idle")
 
         mHandler.removeCallbacks(mFindVideoRunnable)
-        mWebViewPool.cancel(mWebViewPoolCallback)
-        if (mWebView != null) {
-            val web = mWebView!!.get()
+        mWebViewRequest?.dispose()
+        mWebViewRequest = null
+        val web = mWebView
+        if (web != null) {
             web.webViewClient = WebViewClient()
             web.webChromeClient = WebChromeClient()
             web.loadUrl("about:blank")
             web.clearHistory()
-            mWebView!!.release()
             mWebView = null
+            mWebViewPool.addItem(web)
             setPageState(PageState.NONE)
         }
 
@@ -208,7 +207,12 @@ internal class CctvMediaResolver(
     private fun enterQueuedState() {
         Log.d(TAG, "Getting WebView")
         mResolveState = ResolveState.QUEUED
-        mWebViewPool.request(mWebViewPoolCallback)
+        mWebViewRequest = mWebViewPool.request()
+                .subscribe({ web ->
+                    mWebView = web
+                    mWebViewRequest = null
+                    enterStartState()
+                })
     }
 
     private fun enterStartState() {
@@ -234,7 +238,7 @@ internal class CctvMediaResolver(
         Log.d(TAG, "Finding <video>")
         mResolveState = ResolveState.FINDING
 
-        val web = mWebView!!.get()
+        val web = mWebView!!
         val javaScript = "(function() {\n" +
                 "  var videos = document.getElementsByTagName('video');\n" +
                 "  var src = (videos.html5Player) ? videos.html5Player.src\n" +
@@ -277,7 +281,7 @@ internal class CctvMediaResolver(
             CctvMediaResolver.ResolveState.START -> {
                 setPageState(PageState.LOADING)
                 mPageLoadCount = 0
-                val web = mWebView!!.get()
+                val web = mWebView!!
                 val settings = web.settings
                 //settings.setUserAgentString("UCWEB/2.0 (iPad; U; CPU OS 7_1 like Mac OS X; en; iPad3,6) U2/1.0.0 UCBrowser/9.3.1.344");
                 settings.userAgentString = "Mozilla/5.0 (Linux; Android 6.0; Nexus 5 Build/MRA58N) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/61.0.3163.100 Mobile Safari/537.36"
