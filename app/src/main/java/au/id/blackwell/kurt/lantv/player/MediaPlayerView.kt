@@ -54,7 +54,7 @@ abstract class MediaPlayerView : FrameLayout, TvPlayer {
 
             if (mMediaDetails != null) {
                 Log.d(TAG, "Got media details")
-                onChangeState(TvPlayerState.RESOLVING, 1f)
+                onChangeState(TvPlayerState.CONNECTING, 0f)
             } else {
                 Log.d(TAG, "Failed to get media details")
                 onFailureState(context.getString(R.string.status_failed_connection))
@@ -349,7 +349,7 @@ abstract class MediaPlayerView : FrameLayout, TvPlayer {
             MediaPlayerView.PlayState.PLAYING -> if (initLayout() && mMediaPlayerState != MediaPlayerState.STARTED) {
                 Log.d(TAG, "Starting to play video")
                 mMediaPlayerState = MediaPlayerState.STARTED
-                onChangeState(TvPlayerState.CONNECTING, 0f)
+                onChangeState(TvPlayerState.CONNECTING, 1f)
                 try {
                     mMediaPlayer!!.start()
                 } catch (error: Throwable) {
