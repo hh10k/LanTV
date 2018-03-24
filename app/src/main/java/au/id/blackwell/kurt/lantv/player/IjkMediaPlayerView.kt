@@ -7,8 +7,6 @@ import android.view.SurfaceHolder
 
 import java.io.IOException
 
-import au.id.blackwell.kurt.lantv.MediaDetails
-import tv.danmaku.ijk.media.player.AbstractMediaPlayer
 import tv.danmaku.ijk.media.player.IMediaPlayer
 import tv.danmaku.ijk.media.player.IjkMediaPlayer
 

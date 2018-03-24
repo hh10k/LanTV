@@ -29,40 +29,6 @@ class MainActivity : AppCompatActivity() {
         private val TAG = "MainActivity"
 
         private val STATE_CHANNEL = "channel"
-
-        private val DEFAULT_PLAYER = TvPlayerFactory.IJK
-        private val TV_CHANNELS = arrayOf(
-                TvChannel("cctv1", "CCTV-1 综合", DEFAULT_PLAYER, "cctv://tv.cctv.com/live/cctv1/hd/"),
-                TvChannel("cctv2", "CCTV-2 财经", null, "cctv://tv.cctv.com/live/cctv2/hd/")/* unavailable online */,
-                TvChannel("cctv3", "CCTV-3 综艺", DEFAULT_PLAYER, "cctv://tv.cctv.com/live/cctv3/hd/"),
-                TvChannel("cctv4", "CCTV-4 亚洲", DEFAULT_PLAYER, "cctv://tv.cctv.com/live/cctv4/hd/"),
-                TvChannel("cctveurope", "CCTV-4 欧洲", DEFAULT_PLAYER, "cctv://tv.cctv.com/live/cctveurope/hd/"),
-                TvChannel("cctvamerica", "CCTV-4 美洲", DEFAULT_PLAYER, "cctv://tv.cctv.com/live/cctvamerica/hd/"),
-                TvChannel("cctv5", "CCTV-5 体育", null, "cctv://tv.cctv.com/live/cctv5/hd/")/* unavailable in my region */,
-                TvChannel("cctv5plus", "CCTV-5+ 体育赛事", null, "cctv://tv.cctv.com/live/cctv5plus/hd/")/* unavailable in my region */,
-                TvChannel("cctv6", "CCTV-6 电影", null, "cctv://tv.cctv.com/live/cctv6/hd/")/* unavailable online */,
-                TvChannel("cctv7", "CCTV-7 军事农业", DEFAULT_PLAYER, "cctv://tv.cctv.com/live/cctv7/hd/"),
-                TvChannel("cctv8", "CCTV-8 电视剧", null, "cctv://tv.cctv.com/live/cctv8/hd/")/* unavailable online */,
-                TvChannel("cctvjilu", "CCTV-9 纪录", null, "cctv://tv.cctv.com/live/cctvjilu/hd/")/* unavailable online */,
-                TvChannel("cctv10", "CCTV-10 科教", DEFAULT_PLAYER, "cctv://tv.cctv.com/live/cctv10/hd/"),
-                TvChannel("cctv11", "CCTV-11 戏曲", DEFAULT_PLAYER, "cctv://tv.cctv.com/live/cctv11/hd/"),
-                TvChannel("cctv12", "CCTV-12 社会与法", DEFAULT_PLAYER, "cctv://tv.cctv.com/live/cctv12/hd/"),
-                TvChannel("cctv13", "CCTV-13 新闻", DEFAULT_PLAYER, "cctv://tv.cctv.com/live/cctv13/hd/"),
-                TvChannel("cctvchild", "CCTV-14 少儿", DEFAULT_PLAYER, "cctv://tv.cctv.com/live/cctvchild/hd/"),
-                TvChannel("cctv15", "CCTV-15 音乐", DEFAULT_PLAYER, "cctv://tv.cctv.com/live/cctv15/hd/"))
-        private val DEFAULT_TV_CHANNEL_ID = "cctv13"
-        private val DEFAULT_TV_CHANNEL_INDEX = getTvChannelIndexById(DEFAULT_TV_CHANNEL_ID)
-
-        private fun getTvChannelIndexById(id: String): Int {
-            var channelIndex = 0
-            for (i in TV_CHANNELS.indices) {
-                if (TV_CHANNELS[i].id == DEFAULT_TV_CHANNEL_ID) {
-                    channelIndex = i
-                    break
-                }
-            }
-            return channelIndex
-        }
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -81,9 +47,9 @@ class MainActivity : AppCompatActivity() {
         cookieManager.setCookie("http://tv.cctv.com/", "country_code=CN; path=/live")
 
         if (savedInstanceState != null) {
-            mChannelIndex = savedInstanceState.getInt(STATE_CHANNEL, DEFAULT_TV_CHANNEL_INDEX)
+            mChannelIndex = savedInstanceState.getInt(STATE_CHANNEL, TvChannelConfiguration.DEFAULT_TV_CHANNEL_INDEX)
         } else {
-            mChannelIndex = DEFAULT_TV_CHANNEL_INDEX
+            mChannelIndex = TvChannelConfiguration.DEFAULT_TV_CHANNEL_INDEX
         }
     }
 
@@ -139,18 +105,18 @@ class MainActivity : AppCompatActivity() {
 
     private fun stepTvChannel(direction: Int) {
         var channelIndex = mChannelIndex
-        val step = TV_CHANNELS.size + direction
+        val step = TvChannelConfiguration.TV_CHANNELS.size + direction
 
         do {
-            channelIndex = (channelIndex + step) % TV_CHANNELS.size
-        } while (!TV_CHANNELS[channelIndex].isPlayable && channelIndex != mChannelIndex)
+            channelIndex = (channelIndex + step) % TvChannelConfiguration.TV_CHANNELS.size
+        } while (!TvChannelConfiguration.TV_CHANNELS[channelIndex].isPlayable && channelIndex != mChannelIndex)
 
         setTvChannel(channelIndex)
         mPlayer!!.play()
     }
 
     private fun setTvChannel(channelIndex: Int) {
-        val channel = TV_CHANNELS[channelIndex]
+        val channel = TvChannelConfiguration.TV_CHANNELS[channelIndex]
 
         // Restart playback if we had to recreate the player or the channel has changed
         if (createPlayer(channel.playerType!!) || channelIndex != mChannelIndex) {

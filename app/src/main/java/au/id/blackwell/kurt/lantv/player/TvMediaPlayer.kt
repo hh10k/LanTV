@@ -4,8 +4,6 @@ import android.view.SurfaceHolder
 
 import java.io.IOException
 
-import au.id.blackwell.kurt.lantv.MediaDetails
-
 interface TvMediaPlayer {
     fun isPlaying(): Boolean
     fun setListener(listener: TvMediaPlayerListener)

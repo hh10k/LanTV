@@ -6,12 +6,10 @@ import android.net.Uri
 import android.os.Build
 import android.os.Handler
 import android.util.Log
-import android.webkit.ValueCallback
 import android.webkit.WebChromeClient
 import android.webkit.WebResourceError
 import android.webkit.WebResourceRequest
 import android.webkit.WebResourceResponse
-import android.webkit.WebSettings
 import android.webkit.WebView
 import android.webkit.WebViewClient
 
@@ -22,11 +20,15 @@ import java.io.ByteArrayInputStream
 import java.nio.charset.StandardCharsets
 import java.util.ArrayList
 
-import au.id.blackwell.kurt.lantv.MediaDetails
+import au.id.blackwell.kurt.lantv.player.MediaDetails
 import au.id.blackwell.kurt.lantv.utility.NumberUtility
 import au.id.blackwell.kurt.lantv.utility.Pool
 
-internal class CctvMediaResolver(private val mWebViewPool: Pool<WebView>, private val mUrl: String) : MediaResolver {
+internal class CctvMediaResolver(
+        private val mWebViewPool: Pool<WebView>,
+        private val mUrl: String)
+    : MediaResolver {
+
     companion object {
         private val TAG = "CctvMediaResolver"
 

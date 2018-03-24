@@ -13,7 +13,6 @@ import android.widget.FrameLayout
 
 import java.io.IOException
 
-import au.id.blackwell.kurt.lantv.MediaDetails
 import au.id.blackwell.kurt.lantv.resolver.MediaResolver
 import au.id.blackwell.kurt.lantv.R
 

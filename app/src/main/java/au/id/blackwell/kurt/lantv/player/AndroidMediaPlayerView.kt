@@ -7,8 +7,6 @@ import android.util.Log
 
 import java.io.IOException
 
-import au.id.blackwell.kurt.lantv.MediaDetails
-
 internal class AndroidMediaPlayerView : MediaPlayerView {
 
     internal inner class AndroidMediaPlayer(var mContext: Context) : MediaPlayer(),
