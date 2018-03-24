@@ -97,7 +97,7 @@ class TvPlayerStatusView : ConstraintLayout, TvPlayerStatusListener {
                 setVisible(true)
             }
             TvPlayerState.FAILED -> {
-                mText!!.text = context.getString(R.string.status_failed)
+                mText!!.text = context.getString(R.string.status_failed_unknown)
                 setVisible(true)
             }
             else -> {

@@ -2,6 +2,7 @@ package au.id.blackwell.kurt.lantv.player
 
 import android.content.Context
 import android.graphics.PixelFormat
+import android.media.MediaPlayer
 import android.support.v4.content.ContextCompat
 import android.util.AttributeSet
 import android.util.Log
@@ -15,6 +16,7 @@ import java.io.IOException
 
 import au.id.blackwell.kurt.lantv.resolver.MediaResolver
 import au.id.blackwell.kurt.lantv.R
+import tv.danmaku.ijk.media.player.IjkMediaPlayer
 
 abstract class MediaPlayerView : FrameLayout, TvPlayer {
     companion object {
@@ -107,7 +109,19 @@ abstract class MediaPlayerView : FrameLayout, TvPlayer {
         override fun onError(what: Int, extra: Int): Boolean {
             Log.i(TAG, String.format("Error during playback: what=%d, extra=%d", what, extra))
             mMediaPlayerState = MediaPlayerState.ERROR
-            onFailureState(context.getString(R.string.status_failed_playback))
+
+            val MEDIA_ERROR_IJK_PLAYER = -10000
+            val message = when (what) {
+                MediaPlayer.MEDIA_ERROR_IO -> R.string.status_failed_io
+                MediaPlayer.MEDIA_ERROR_MALFORMED -> R.string.status_failed_malformed
+                MediaPlayer.MEDIA_ERROR_SERVER_DIED -> R.string.status_failed_server
+                MediaPlayer.MEDIA_ERROR_TIMED_OUT -> R.string.status_failed_timeout
+                MediaPlayer.MEDIA_ERROR_UNKNOWN -> R.string.status_failed_unknown
+                MediaPlayer.MEDIA_ERROR_UNSUPPORTED -> R.string.status_failed_unsupported
+                MEDIA_ERROR_IJK_PLAYER -> R.string.status_failed_ijk
+                else -> R.string.status_failed_unexpected
+            }
+            onFailureState(context.getString(message))
             return false
         }
 
@@ -126,9 +140,13 @@ abstract class MediaPlayerView : FrameLayout, TvPlayer {
         }
 
         override fun onCompletion() {
-            mMediaPlayerState = MediaPlayerState.PLAYBACK_COMPLETE
-            onChangeState(TvPlayerState.STOPPED, 0f)
-            Log.d(TAG, "Playback complete")
+            if (mMediaPlayerState == MediaPlayerState.ERROR) {
+                Log.d(TAG, "Playback complete but remaining in error state")
+            } else {
+                Log.d(TAG, "Playback complete")
+                mMediaPlayerState = MediaPlayerState.PLAYBACK_COMPLETE
+                onChangeState(TvPlayerState.STOPPED, 0f)
+            }
         }
     }
 

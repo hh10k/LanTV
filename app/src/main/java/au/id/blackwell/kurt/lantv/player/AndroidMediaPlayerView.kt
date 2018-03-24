@@ -38,49 +38,37 @@ internal class AndroidMediaPlayerView : MediaPlayerView {
         }
 
         override fun onPrepared(mp: MediaPlayer) {
-            if (mListener != null) {
-                mListener!!.onPrepared()
-            }
+            mListener?.onPrepared()
         }
 
         override fun onBufferingUpdate(mp: MediaPlayer, percent: Int) {
-            if (mListener != null) {
-                mListener!!.onBufferingUpdate(percent)
-            }
+            mListener?.onBufferingUpdate(percent)
         }
 
         override fun onInfo(mp: MediaPlayer, what: Int, extra: Int): Boolean {
             Log.d(TAG, String.format("info %d, %d", what, extra))
 
             var handled = false
-            if (mListener != null) {
-                when (what) {
-                    MediaPlayer.MEDIA_INFO_VIDEO_RENDERING_START -> {
-                        mListener!!.onPlaying()
-                        handled = true
-                    }
+            when (what) {
+                MediaPlayer.MEDIA_INFO_VIDEO_RENDERING_START -> {
+                    mListener?.onPlaying()
+                    handled = true
                 }
             }
             return handled
         }
 
         override fun onCompletion(mp: MediaPlayer) {
-            if (mListener != null) {
-                mListener!!.onCompletion()
-            }
+            mListener?.onCompletion()
         }
 
         override fun onError(mp: MediaPlayer, what: Int, extra: Int): Boolean {
-            return if (mListener != null) {
-                mListener!!.onError(what, extra)
-            } else false
+            return mListener?.onError(what, extra) ?: false
         }
 
         override fun onVideoSizeChanged(mp: MediaPlayer, width: Int, height: Int) {
-            if (mListener != null) {
-                // Assumes pixel size is always square
-                mListener!!.onVideoSizeChanged(width, height, width.toFloat() / height.toFloat())
-            }
+            // Assumes pixel size is always square
+            mListener?.onVideoSizeChanged(width, height, width.toFloat() / height.toFloat())
         }
     }
 

@@ -5,8 +5,14 @@
     <string name="status_buffering_progress">Buffering %1$d%%</string>
     <string name="status_playing">Playing</string>
     <string name="status_stopped">Stopped</string>
-    <string name="status_failed">Failed</string>
     <string name="status_failed_reason">Failed - %s</string>
     <string name="status_failed_connection">Could not get video URL</string>
-    <string name="status_failed_playback">Error during playback</string>
+    <string name="status_failed_io">Network connection lost</string>
+    <string name="status_failed_malformed">Invalid or unsupported format</string>
+    <string name="status_failed_server">Server failure</string>
+    <string name="status_failed_timeout">Stream timeout</string>
+    <string name="status_failed_unknown">Unknown error</string>
+    <string name="status_failed_unsupported">Unsupported format</string>
+    <string name="status_failed_unexpected">Unexpected error</string>
+    <string name="status_failed_ijk">Stream read failure</string>
 </resources>

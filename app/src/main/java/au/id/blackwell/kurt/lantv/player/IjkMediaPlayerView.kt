@@ -73,49 +73,37 @@ internal class IjkMediaPlayerView : MediaPlayerView {
         }
 
         override fun onPrepared(mp: IMediaPlayer) {
-            if (mListener != null) {
-                mListener!!.onPrepared()
-            }
+            mListener?.onPrepared()
         }
 
         override fun onBufferingUpdate(mp: IMediaPlayer, percent: Int) {
-            if (mListener != null) {
-                mListener!!.onBufferingUpdate(percent)
-            }
+            mListener?.onBufferingUpdate(percent)
         }
 
         override fun onInfo(mp: IMediaPlayer, what: Int, extra: Int): Boolean {
             Log.d(TAG, String.format("info %d, %d", what, extra))
 
             var handled = false
-            if (mListener != null) {
-                when (what) {
-                    IjkMediaPlayer.MEDIA_INFO_VIDEO_RENDERING_START -> {
-                        mListener!!.onPlaying()
-                        handled = true
-                    }
+            when (what) {
+                IjkMediaPlayer.MEDIA_INFO_VIDEO_RENDERING_START -> {
+                    mListener?.onPlaying()
+                    handled = true
                 }
             }
             return handled
         }
 
         override fun onCompletion(mp: IMediaPlayer) {
-            if (mListener != null) {
-                mListener!!.onCompletion()
-            }
+            mListener?.onCompletion()
         }
 
         override fun onError(mp: IMediaPlayer, what: Int, extra: Int): Boolean {
-            return if (mListener != null) {
-                mListener!!.onError(what, extra)
-            } else false
+            return mListener?.onError(what, extra) ?: false
         }
 
         override fun onVideoSizeChanged(mp: IMediaPlayer, width: Int, height: Int, sar_num: Int, sar_den: Int) {
-            if (mListener != null) {
-                // TODO: sar_num, sar_den
-                mListener!!.onVideoSizeChanged(width, height, width.toFloat() / height.toFloat())
-            }
+            // TODO: sar_num, sar_den
+            mListener?.onVideoSizeChanged(width, height, width.toFloat() / height.toFloat())
         }
     }
 
